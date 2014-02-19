@@ -1,0 +1,3 @@
+exportPattern("^[[:alpha:]]+")
+export(SPADE)
+import(RGtk2,gWidgets,gWidgetsRGtk2,raster,rgdal,fields,cairoDevice,deSolve,RgoogleMaps)

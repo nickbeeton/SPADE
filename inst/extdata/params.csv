@@ -1,0 +1,23 @@
+budget,2000000,Maximum available budget (used for optimisation)
+area.target,0.5,Target proportional population in region (used for optimisation)
+elev.d.mod,0.5,Dispersal rate in high elevation area (where elevation = 1 in raster)
+init.cull,0.99,Culling rate in first season
+maint.cull,0.99,Culling rate after first season
+init.cull.abs,1000,Total cull in first season
+maint.cull.abs,1000,Total cull after first season
+target.density,0.5,Species density at which culling stops in a cell
+cell.size,100,Cell size (km^2)
+r.m,0.17,Growth rate of species
+theta,1.3,Shape parameter
+min.d,0.01,Minimum possible population in a cell
+disp.max,0.1,Maximum dispersal probability
+disp.min,0.01,Minimum dispersal probability
+cost.int,0.1464,Intercept of cost per animal equation
+cost.slope,-1.445,Slope of cost per animal equation
+helicopter.cost,1000,Hourly cost of helicopter
+fence.failure,0.05,Fence failure rate
+fence.build.cost,2600,Fence build cost (per unit)
+fence.maintain.cost,2600,Fence maintenance cost (per unit)
+overhead,1.18,Overhead cost (so 18% default)
+duration,10,Duration (years)
+timesteps,1,Integration timesteps per season
