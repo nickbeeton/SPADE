@@ -549,7 +549,6 @@ calc.cull = function(pop, t, t2, params, cull.mask)
       eps = interactions[[s]][[s]]$min.d * cell.size
 
       cullable.cells = sum(pop[s,cull.mask[[i]]>0] > eps & pop[s,cull.mask[[i]]>0] > TD.curr)
-      print(paste('cullable', cullable.cells))
 
       if (params$cull.seasons[i,t2] & cullable.cells > 0) # if we're in the right season(s) for management and there are cullable cells above targets
       {

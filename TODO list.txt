@@ -1,0 +1,52 @@
+(For more detail, search for TODO in R source files)
+
+Critical
+---------
+
+* Fix bugs when running model for multiple seasons
+
+* Add ability to export raster files from "Pop TS" tab and csv tables of non-spatial data (e.g. total population and cost)
+
+* Precalculate geometry when first-species carrying capacity is included instead of when "Run model" button is pressed (avoids calculating lapmat, gradmat.x and gradmat.y EVERY TIME)
+
+* Add more relevant cost-benefit models (e.g. animal welfare, condition of priority areas)
+
+* More flexible management options (e.g. separate budgeting and timing of different strategies)
+
+
+Important
+---------
+
+* Streamline use of R objects, in particular avoiding use of global variables where possible while avoiding copying of large variables into function calls
+
+* Either fix non-sparse matrix method or remove; currently not working
+
+* Check up on current optimisers
+
+* Allow optimising over multiple management strategies
+
+* Write up more detailed SPADE manual
+
+* Clean up inst/extdata/formulae.csv to include only reasonable and widespread model formulae
+
+
+Incidental (could potentially leave for post-release)
+----------
+
+* Formalise use of first-species carrying capacity as a template, i.e. check every new GIS layer against it and clear all layer data if it is changed
+
+* Clean up code, e.g. clean up TODO statements in R source files
+
+* Clean up function help files (and add for new ones)
+
+* Add population scale on 'Proportional population' graph
+
+* Add optimisers for absolute and proportional removal
+
+* Add Lagrange-multipliers approach for cost-benefit models
+
+* Add two-way interactions between species
+
+* Allow associated cost for demographic/interaction effects
+
+* Allow other projections than GDA94/MGA55

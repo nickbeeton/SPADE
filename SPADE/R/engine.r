@@ -5,6 +5,267 @@
 # (last two are kept separate for the spatial optimisation, where we may choose to cull a subset
 # of the target control area for efficiency)
 
+# Laplacian and gradient calcs
+calc.geom = function(fenced, progress.bar = TRUE)
+{
+  # create a progress bar for the user
+  if (progress.bar) newProgressBar('Calculating geometry')
+
+  # find x and y coordinates of each defined cell in first species' carrying capacity
+  locs <<- which(!is.na(K[[1]]), arr.ind = TRUE)
+  # work out how many defined cells
+  N = nrow(locs)
+  # work out how many defined cells
+  N = nrow(locs)
+
+  # do the same for fencing raster
+  if (length(dim(fenced))>0) fenced = fenced[locs]
+
+  # row and column info for x and y gradients
+  # (initially store 4N elements)
+  Nmax.x = 4*N; Nmax.y = 4*N
+  row.sparse.x = integer(Nmax.x)
+  col.sparse.x = integer(Nmax.x)
+  row.sparse.y = integer(Nmax.y)
+  col.sparse.y = integer(Nmax.y)
+  # how many elements have been defined so far
+  n.x = 0; n.y = 0
+    
+  if (!sparse) 
+    lapmat <<- matrix(0, nrow = N, ncol = N)
+
+  # initialise length of fencing required
+  fence.length = 0
+  # initialise placement of fencing on grid
+  fence.place = fenced * 0
+
+  # find largest row and column in which interactions happen
+  loc.nrow = max(locs[,1])
+  loc.ncol = max(locs[,2])
+
+  # calculate interactions between each pair of cells
+  for (j in 1:loc.ncol) # search by column
+  {
+    point = which(locs[,2]==j) # which cells are in column j
+    rows = locs[point,1] # find valid row numbers in column
+    adjs = which(diff(rows)==1) # find which rows are adjacent
+    n.adjs = length(adjs)
+    if (n.adjs>0) # if there are any, add to relationship matrix (col > row)
+    {
+      row.sparse.x[n.x + (1:n.adjs)] = point[adjs]
+      col.sparse.x[n.x + (1:n.adjs)] = point[adjs+1]
+      n.x = n.x + n.adjs # update number of elements
+    }
+    if ((Nmax.x - n.x) < (2*loc.nrow)) # if getting close, double array sizes
+    {
+      row.sparse.x = c(row.sparse.x, rep(0, Nmax.x))
+      col.sparse.x = c(col.sparse.x, rep(0, Nmax.x))          
+      Nmax.x = Nmax.x * 2
+    }   
+  }
+  if (progress.bar) updateProgressBar(0.5*loc.ncol/(loc.ncol + loc.nrow + 3 * N), 'Calculating geometry') 
+  # trim off unnecessary bits
+  row.sparse.x = row.sparse.x[1:n.x]
+  col.sparse.x = col.sparse.x[1:n.x]    
+
+  for (j in 1:loc.nrow) # search by row
+  {
+    point = which(locs[,1]==j) # which cells are in row j
+    cols = locs[point,2] # find valid col numbers in row
+    adjs = which(diff(cols)==1) # find which cols are adjacent
+    n.adjs = length(adjs)
+    if (n.adjs>0) # if there are any, add to relationship matrix (col > row)
+    {
+      row.sparse.y[n.y + (1:n.adjs)] = point[adjs]
+      col.sparse.y[n.y + (1:n.adjs)] = point[adjs+1]
+      n.y = n.y + n.adjs  # update number of elements
+    }
+    if ((Nmax.y - n.y) < (2*loc.ncol)) # if getting close, double array sizes
+    {
+      row.sparse.y = c(row.sparse.y, rep(0, Nmax.y))
+      col.sparse.y = c(col.sparse.y, rep(0, Nmax.y))          
+      Nmax.y = Nmax.y * 2
+    }    
+  } 
+  if (progress.bar) updateProgressBar(0.5*(loc.ncol + loc.nrow)/(loc.ncol + loc.nrow + 3 * N), 'Calculating geometry')    
+
+  # trim off unnecessary bits
+  row.sparse.y = row.sparse.y[1:n.y]
+  col.sparse.y = col.sparse.y[1:n.y]  
+  
+  # add reverse relationship (row > col) for Laplacian matrix
+  n = n.x + n.y
+  row.sparse = c(row.sparse.x, row.sparse.y, col.sparse.x, col.sparse.y)
+  col.sparse = row.sparse[c(n + (1:n), 1:n)]
+  # order by row
+  ii = order(row.sparse)
+  row.sparse = row.sparse[ii]
+  col.sparse = col.sparse[ii]
+  # vector with pointers to relationships for each element (by row)
+  cell.start = 1+c(0,which(diff(row.sparse)>0),length(row.sparse))
+ 
+  # add reverse relationship for x-gradient matrix
+  row.sparse.x = c(row.sparse.x, col.sparse.x)
+  col.sparse.x = row.sparse.x[c(n.x + (1:n.x), 1:n.x)]
+  val.sparse.x = c(rep(1, n.x), rep(-1, n.x))
+  # order by row for gradient x
+  ii = order(row.sparse.x)
+  row.sparse.x = row.sparse.x[ii]
+  col.sparse.x = col.sparse.x[ii]
+  val.sparse.x = val.sparse.x[ii]
+  # vector with pointers to relationships for each element (by row)  
+  cell.start.x = 1+c(0,which(diff(row.sparse.x)>0),length(row.sparse.x))
+
+  # add reverse relationship for gradient y
+  row.sparse.y = c(row.sparse.y, col.sparse.y)
+  col.sparse.y  = row.sparse.y[c(n.y + (1:n.y), 1:n.y)]
+  val.sparse.y = c(rep(1, n.y), rep(-1, n.y))
+  # order by row for gradient y
+  ii = order(row.sparse.y)
+  row.sparse.y = row.sparse.y[ii]
+  col.sparse.y = col.sparse.y[ii]
+  val.sparse.y = val.sparse.y[ii]
+  # vector with pointers to relationships for each element (by row)  
+  cell.start.y = 1+c(0,which(diff(row.sparse.y)>0),length(row.sparse.y))
+  
+  # initialise vectors for self-affecting information (only non-zero for noncentred derivatives)
+  self.x = numeric(N)
+  self.y = numeric(N)
+ 
+  # initialise values for Laplacian
+  if (sparse) val.sparse = numeric(2*n)  
+  
+  # calculate Laplacian values
+  for (i in 1:(length(cell.start)-1)) # loop over all but the last interacting cell (last cell can't interact with itself)
+  {
+    j = cell.start[i]:(cell.start[i+1]-1)
+    k = col.sparse[j]
+
+    # calculate fence information
+    # find out which adjacent cells are in a different zone (i.e. have a fence between them)
+    fence.which = which(fenced[i] != fenced[k]) 
+    fence.length = fence.length + length(fence.which) # add lengths to total
+
+    # half the cost of fencing is allocated to each side
+    # should still work properly even if length of fence.which = 0
+    fence.place[i] = fence.place[i] + 0.5 * length(fence.which) # allocate to current cell's side
+    fence.place[k[fence.which]] = fence.place[k[fence.which]] + 0.5  # allocate to neighbour's side
+
+    # incorporate effects of a fence separating regions in different zones
+    # with failure rate fence.failure
+    disp.mult = fence.failure + (1 - fence.failure) * (fenced[i] == fenced[k]) 
+    if (length(k) > 0) # if the cell has any neighbours
+    {
+      if (!sparse)
+      {
+        lapmat[i, k] <<- disp.mult # allow dispersal between them depending on fencing
+        lapmat[k, i] <<- disp.mult # in both directions
+      }
+      else # do the above, but for a sparse matrix
+      {
+        val.sparse[j] = disp.mult
+      }
+    }
+  }
+  if (progress.bar) updateProgressBar(0.5*(loc.ncol + loc.nrow + N)/(loc.ncol + loc.nrow + 3 * N), 'Calculating geometry')          
+  
+  # calculate gradient x values  
+  for (i in 1:(length(cell.start.x)-1)) # loop over all but the last interacting cell (last cell can't interact with itself)
+  {
+    j = cell.start.x[i]:(cell.start.x[i+1]-1)
+    k = col.sparse.x[j]
+  
+    if (length(k) > 0) # if the cell has any neighbours
+    {
+      # incorporate effects of a fence separating regions in different zones
+      # with failure rate fence.failure
+      disp.mult = fence.failure + (1 - fence.failure) * (fenced[i] == fenced[k]) 
+      if (length(k) == 1) # if noncentred
+      {
+        val.sparse.x[j] = val.sparse.x[j]*disp.mult
+        self.x[i] = -val.sparse.x[j] # opposite of other interaction
+      }
+      else if (length(k) == 2) # if centred
+        val.sparse.x[j] = val.sparse.x[j]*disp.mult/2 # halve derivative (double distance) and no self-effect
+    }
+  }
+  if (progress.bar) updateProgressBar(0.5*(loc.ncol + loc.nrow + 2*N)/(loc.ncol + loc.nrow + 3 * N), 'Calculating geometry')        
+
+  # calculate gradient y values  
+  for (i in 1:(length(cell.start.y)-1)) # loop over all but the last interacting cell (last cell can't interact with itself)
+  {
+    j = cell.start.y[i]:(cell.start.y[i+1]-1)
+    k = col.sparse.y[j]
+    
+    if (length(k) > 0) # if the cell has any neighbours
+    {
+      # incorporate effects of a fence separating regions in different zones
+      # with failure rate fence.failure
+      disp.mult = fence.failure + (1 - fence.failure) * (fenced[i] == fenced[k]) 
+      if (length(k) == 1) # if noncentred
+      {
+        val.sparse.y[j] = val.sparse.y[j]*disp.mult
+        self.y[i] = -val.sparse.y[j] # opposite of other interaction
+      }
+      else if (length(k) == 2) # if centred
+        val.sparse.y[j] = val.sparse.y[j]*disp.mult/2 # halve derivative (double distance) and no self-effect
+    }
+  }
+  if (progress.bar) updateProgressBar(0.5, 'Calculating geometry')        
+
+  # create sparse matrix for gradients (TODO: add non-sparse method)
+  gradmat.x <<- spam(list(i = row.sparse.x, j = col.sparse.x, val.sparse.x), N, N)
+  if (progress.bar) updateProgressBar(7/12, 'Calculating geometry')        
+  diagnears = spam(list(i = 1:N, j = 1:N, self.x))
+  if (progress.bar) updateProgressBar(2/3, 'Calculating geometry')        
+  gradmat.x <<- gradmat.x + diagnears
+  
+  gradmat.y <<- spam(list(i = row.sparse.y, j = col.sparse.y, val.sparse.y), N, N)
+  if (progress.bar) updateProgressBar(3/4, 'Calculating geometry')        
+  diagnears = spam(list(i = 1:N, j = 1:N, self.y))
+  if (progress.bar) updateProgressBar(5/6, 'Calculating geometry')          
+  gradmat.y <<- gradmat.y + diagnears
+
+ 
+  # calculate the number of cells close to each individual cell
+  if (!sparse)
+    nears = apply(lapmat, 1, sum)
+  else
+  {
+    # efficient way to calculate nears using sparse matrix info
+    nears = numeric(N)
+    test = aggregate(val.sparse, by = list(r = row.sparse), FUN = sum)
+    nears[test$r] = test$x
+    # create sparse matrix
+    lapmat <<- spam(list(i = row.sparse, j = col.sparse, val.sparse), N, N)
+    if (progress.bar) updateProgressBar(11/12, 'Calculating geometry')            
+  }
+
+  # scale the length and cost of the fence to make it per km as opposed to per cell
+  # (note: assuming square cells)
+  fence.length = fence.length * sqrt(cell.size)
+  fence.place <<- fence.place * sqrt(cell.size)
+  
+  # two different methods to deal with dispersal
+  # TODO: allow user to choose?
+  
+  # disperse in all available directions (same overall dispersal on boundary, just pushed more in the available directions)
+  #  lapmat = lapmat / outer(rep(1,N), nears, '*') 
+  #  lapmat = lapmat - diag(N)
+  
+  # if cannot disperse in a direction, stay put (and/or assume that just as many are migrating the other way = zero net migration)
+  lapmat <<- lapmat / 8 
+  if (!sparse)
+    lapmat <<- lapmat - diag(nears)/8    
+  else
+  {
+    diagnears = spam(list(i = 1:length(nears), j = 1:length(nears), nears))
+    lapmat <<- lapmat - diagnears/8
+  }
+  if (progress.bar) dispose(pwindow)  
+}
+
+
 run.sim.opt = function(strategy, init.cull, maint.cull, target.density, budget, cull.mask, ctrl.mask, fenced, progress.bar = TRUE)
 {
   # make sure the parameters are up to date before starting (using update.params in init.r)
@@ -65,7 +326,6 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
   if (gui) update.params()
   
   # create a progress bar for the user
-  if (progress.bar) newProgressBar()
 
   # for each initial condition raster, make sure cells start above threshold
   # TODO: will this affect future model runs? (yes it does! comment out)
@@ -90,9 +350,6 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
   for (i in 1:length(cull.mask)) 
     if (length(dim(cull.mask[[i]]))>0) cull.mask[[i]] = cull.mask[[i]][locs]
 
-  # do the same for fencing raster
-  if (length(dim(fenced))>0) fenced = fenced[locs]
-  
   # calculate how many cells are managed for each strategy
 #  if (N.strategies > 0)
 #  {
@@ -100,152 +357,12 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
 #    for (i in 1:N.strategies) cull.cells[i] = sum(cull.mask[[i]] > 0, na.rm=T)
 #  }
   
-  # generate Laplace matrix 
-
-#  lapmat <<- spam(0, nrow = N, ncol = N)
-
-  row.sparse = integer(4*N)
-  col.sparse = integer(4*N)
-    
-  if (!sparse) 
-    lapmat <<- matrix(0, nrow = N, ncol = N)
-  else
-  {
-    Nmax = 4 * N
-    n = 0
-  }
-    
-
-  # initialise length of fencing required
-  fence.length = 0
-  # initialise placement of fencing on grid
-  fence.place = fenced * 0
-
-  # calculate interactions between each pair of cells
-  loc.nrow = max(locs[,1])
-  loc.ncol = max(locs[,2])
+  calc.geom(fenced)
   
-  for (j in 1:loc.ncol) # search by column
-  {
-    point = which(locs[,2]==j) # which cells are in column j
-    rows = locs[point,1] # find valid row numbers in column
-    adjs = which(diff(rows)==1) # find which rows are adjacent
-    n.adjs = length(adjs)
-    if (n.adjs>0)
-    {
-      row.sparse[n + (1:n.adjs)] = point[adjs]
-      col.sparse[n + (1:n.adjs)] = point[adjs+1]
-      n = n + n.adjs
-    }
-    if ((Nmax - n) < (2*loc.nrow)) # if getting close, double array sizes
-    {
-      row.sparse = c(row.sparse, rep(0, Nmax))
-      col.sparse = c(col.sparse, rep(0, Nmax))          
-      Nmax = Nmax * 2
-    }    
-  }
-  
-  for (j in 1:loc.nrow) # search by row
-  {
-    point = which(locs[,1]==j) # which cells are in row j
-    cols = locs[point,2] # find valid col numbers in row
-    adjs = which(diff(cols)==1) # find which cols are adjacent
-    n.adjs = length(adjs)
-    if (n.adjs>0)
-    {
-      row.sparse[n + (1:n.adjs)] = point[adjs]
-      col.sparse[n + (1:n.adjs)] = point[adjs+1]
-      n = n + n.adjs
-    }
-    if ((Nmax - n) < (2*loc.ncol)) # if getting close, double array sizes
-    {
-      row.sparse = c(row.sparse, rep(0, Nmax))
-      col.sparse = c(col.sparse, rep(0, Nmax))          
-      Nmax = Nmax * 2
-    }    
-  }  
-  
-  # trim off unnecessary bits
-  row.sparse = row.sparse[1:n]
-  col.sparse = col.sparse[1:n]    
-  # add reverse relationship
-  row.sparse = c(row.sparse, col.sparse)
-  col.sparse = row.sparse[c(n + (1:n), 1:n)]
-  # order by row
-  ii = order(row.sparse)
-  row.sparse = row.sparse[ii]
-  col.sparse = col.sparse[ii]
-  cell.start = 1+c(0,which(diff(row.sparse)>0),length(row.sparse))
+  # only start simulation's progress bar after calc geometry progress bar is closed
+  if (progress.bar) newProgressBar('Running simulation...')
 
-  if (sparse) val.sparse = numeric(2*n)  # initialise values for sparse format
   
-  for (i in 1:(length(cell.start)-1)) # loop over all but the last interacting cell (last cell can't interact with itself)
-  {
-    j = cell.start[i]:(cell.start[i+1]-1)
-    k = col.sparse[j]
-
-    # calculate fence information
-    # find out which adjacent cells are in a different zone (i.e. have a fence between them)
-    fence.which = which(fenced[i] != fenced[k]) 
-    fence.length = fence.length + length(fence.which) # add lengths to total
-
-    # half the cost of fencing is allocated to each side
-    # should still work properly even if length of fence.which = 0
-    fence.place[i] = fence.place[i] + 0.5 * length(fence.which) # allocate to current cell's side
-    fence.place[k[fence.which]] = fence.place[k[fence.which]] + 0.5  # allocate to neighbour's side
-
-    # incorporate effects of a fence separating regions in different zones
-    # with failure rate fence.failure
-    disp.mult = fence.failure + (1 - fence.failure) * (fenced[i] == fenced[k]) 
-    if (length(k) > 0) # if the cell has any neighbours
-    {
-      if (!sparse)
-      {
-        lapmat[i, k] <<- disp.mult # allow dispersal between them depending on fencing
-        lapmat[k, i] <<- disp.mult # in both directions
-      }
-      else # do the above, but for a sparse matrix
-      {
-        val.sparse[j] = disp.mult
-      }
-    }
-  }
- 
-  # calculate the number of cells close to each individual cell
-  if (!sparse)
-    nears = apply(lapmat, 1, sum)
-  else
-  {
-    # efficient way to calculate nears using sparse matrix info
-    nears = numeric(N)
-    test = aggregate(val.sparse, by = list(r = row.sparse), FUN = sum)
-    nears[test$r] = test$x
-    # create sparse matrix
-    lapmat <<- spam(list(i = row.sparse, j = col.sparse, val.sparse), N, N)
-  }
-
-  # scale the length and cost of the fence to make it per km as opposed to per cell
-  # (note: assuming square cells)
-  fence.length = fence.length * sqrt(cell.size)
-  fence.place <<- fence.place * sqrt(cell.size)
-  
-  # two different methods to deal with dispersal
-  # TODO: allow user to choose?
-  
-  # disperse in all available directions (same overall dispersal on boundary, just pushed more in the available directions)
-  #  lapmat = lapmat / outer(rep(1,N), nears, '*') 
-  #  lapmat = lapmat - diag(N)
-  
-  # if cannot disperse in a direction, stay put (and/or assume that just as many are migrating the other way = zero net migration)
-  lapmat <<- lapmat / 8 
-  if (!sparse)
-    lapmat <<- lapmat - diag(nears)/8    
-  else
-  {
-    diagnears = spam(list(i = 1:length(nears), j = 1:length(nears), nears))
-    lapmat <<- lapmat - diagnears/8
-  }
-
   # create matrix containing population information for each species for each cell
   pop = matrix(NA, N.species, nrow(locs))
   for (i in 1:N.species) # initialise population for each species
@@ -350,7 +467,7 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
       if (progress.bar) # if the progress bar is open
       {
         p = ((t - 1 + t2/seasons)/duration) # calculate how far through we are
-        updateProgressBar(p) # draw info on progress bar
+        updateProgressBar(p, 'Running simulation...') # draw info on progress bar
       }
     }
   }
@@ -404,7 +521,6 @@ calc.step = function(t, y, parms)
         }
 
         ii = KN < 0.5 * N
-        if (any(is.na(ii))) browser()
         KN[ii] = 0.5 * N[ii] # to avoid instability issues
         KN = KN + 1e-6 # to avoid div by zero        
         
@@ -600,7 +716,7 @@ NS.D = function(pn0, C.mask, s)
 #spatial budget
 S.B = function(budget, ctrl.mask, s)
 {
-  newProgressBar() # draw progress bar
+  newProgressBar('Running spatial budget simulation...') # draw progress bar
   
   #start with 50% management rate and target density
   best = run.sim.opt(s, 0.5, 0.5, 0.5, budget, ctrl.mask, ctrl.mask, fenced, progress.bar = FALSE) 
@@ -644,7 +760,7 @@ S.B = function(budget, ctrl.mask, s)
       }
 
       p = (6*(t-1) + i)/30 # calculate how far through we are
-      updateProgressBar(p) # draw information on progress bar
+      updateProgressBar(p, 'Running spatial budget simulation...') # draw information on progress bar
     }
     
     if (t < 5) # if we're not finished yet, run the best of the six quantiles managing 

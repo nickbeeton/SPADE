@@ -1,0 +1,11 @@
+The Landscapes and Policy Research Hub is collaborating with Parks Victoria and NSW National Parks and Wildlife Service to develop a new tool to assist cost-effective decision-making for invasive species management. 
+
+The new tool is called SPADE (Spatial Population Abundance Dynamics Engine) and uses information on the current and potential abundance of a species (for example, deer or wild horses), across a specified landscape (for example, the Australian Alps or the Tasmanian Midlands), combined with relevant information about species demography, (for example, breeding and mortality) to calculate a spatially-explicit estimate (for example, a map or graph) of the species’ abundance over time. 
+
+You have been given access to a development version of the model as an opportunity to test drive the new tool and provide feedback to the developer.
+
+The tool allows users to explore the impacts and costs of different management intervention strategies. It is intended to be used in conjunction with other decision-making tools and processes, and should not be relied on in isolation. Users of the model must independently verify the suitability of the results for their purposes.
+
+Developed by Dr Nick Beeton (Nicholas.Beeton@utas.edu.au), Research Fellow, School of Biological Sciences,  University of Tasmania
+
+The development of the tool was made possible through funding from the Australian Government’s National Environmental Research Program.

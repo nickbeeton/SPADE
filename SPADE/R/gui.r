@@ -1,20 +1,20 @@
 # create a dialog box to select a file
 
-newProgressBar = function()
+newProgressBar = function(text = 'Progress bar')
 {
   # adapted from http://metabolomics-forum.com/viewtopic.php?f=9&t=411
 
-  pwindow <<- gwindow(container = TRUE, width = 400, height = 50, title = "Progress bar (0% done)")
+  pwindow <<- gwindow(container = TRUE, width = 400, height = 50, title = sprintf("%s (0%% done)", text))
   bp <<- gtkProgressBarNew()
   bp$'width-request' = 400
   bp$'height-request' = 50
   add(pwindow, bp)
 }
 
-updateProgressBar = function(p)
+updateProgressBar = function(p, text = 'Progress bar')
 {
   bp$setFraction(p)
-  svalue(pwindow) = sprintf("Progress bar (%.1f%% done)", p*100)
+  svalue(pwindow) = sprintf("%s (%.1f%% done)", text, p*100)
 }
   
 fileChoose <- function(action="print", text = "Select a file...", type="open", ...) 
