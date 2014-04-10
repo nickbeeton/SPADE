@@ -48,8 +48,8 @@ Section "SPADE v0.1.1 (required)" ;No components page, name is not important
   File /r *
 
   FileOpen $9 $INSTDIR\SPADE\SPADE.bat w
-  FileWrite $9 "cd $INSTDIR\SPADE$\r$\n" 
-  FileWrite $9 "$INSTDIR\bin\x64\Rgui.exe$\r$\n"
+  FileWrite $9 'cd "$INSTDIR\SPADE"$\r$\n'
+  FileWrite $9 '"$INSTDIR\bin\x64\Rgui.exe"$\r$\n'
   FileClose $9
 
   WriteUninstaller "uninstall.exe"

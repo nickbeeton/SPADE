@@ -9,7 +9,7 @@ options(guiToolkit="RGtk2")
 
 ## Load required libraries - insert required libraries into this list rather than calling them directly.
 ## This enables them to be auto-installed if possible
-packages = c("gWidgets","gWidgetsRGtk2","raster","rgdal","fields","RGtk2","cairoDevice","deSolve","RgoogleMaps")
+packages = c("grDevices","sp","rgdal","maps","png","RJSONIO","gWidgets","gWidgetsRGtk2","raster","fields","RGtk2","cairoDevice","deSolve","RgoogleMaps","spam")
 
 for(the.package in packages){
   if (!require(the.package,character.only=T)) {
