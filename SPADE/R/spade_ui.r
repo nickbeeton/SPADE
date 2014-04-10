@@ -8,11 +8,11 @@ plotdata = function(DATA, ...)
     DATA.raster = setValues(DATA.raster, getValues(raster(DATA))) # set its values to the input data
     if (is.na(projection(K.rast[[1]]))) # if there is no projection, just plot it
     {
-      plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
+      sp::plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
     }
     else if (projection(K.rast[[1]]) == 'NA')
     {
-      plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
+      sp::plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
     }    
     else
     {
@@ -27,7 +27,7 @@ plotdata = function(DATA, ...)
      if (!("googlemap" %in% env)) # if the variable 'googlemap' doesn't yet exist in the global env, create it
         googlemap <<- try(GetMap.bbox(c(xmin, xmax), c(ymin, ymax)), silent=TRUE) # load map data from Google maps
      # plot the unprojected data (will be drawn over, is used only to initialise the plot)
-     plot(mapRaster, alpha = 0.5, col = rev(terrain.colors(255)), smallplot = c(.75,.8,0.2,0.8), asp=1, ...)
+     sp::plot(mapRaster, alpha = 0.5, col = rev(terrain.colors(255)), smallplot = c(.75,.8,0.2,0.8), asp=1, ...)
      # if there was no error in loading the Google Maps data, draw it
 
     if (!inherits(googlemap, 'try-error'))   
@@ -43,7 +43,7 @@ plotdata = function(DATA, ...)
 #    rasterImage(googlemap[[4]], xmin, ymin, xmax, ymax)
     # now plot the unprojected data on top of our Google Maps data (or on its own if that doesn't exist),
     # with 50% transparency so both map and data are clearly visible
-     plot(mapRaster, add = TRUE, alpha = 0.5, col = rev(terrain.colors(255)), 
+     sp::plot(mapRaster, add = TRUE, alpha = 0.5, col = rev(terrain.colors(255)), 
        smallplot = c(.75,.8,0.2,0.8), ...)
     }
   }

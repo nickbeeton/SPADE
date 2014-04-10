@@ -357,7 +357,8 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
 #    for (i in 1:N.strategies) cull.cells[i] = sum(cull.mask[[i]] > 0, na.rm=T)
 #  }
   
-  calc.geom(fenced)
+  if (K.changed) calc.geom(fenced, progress.bar)
+  K.changed <<- FALSE # reset K.changed so that geometry is not calculated by default next time
   
   # only start simulation's progress bar after calc geometry progress bar is closed
   if (progress.bar) newProgressBar('Running simulation...')
@@ -492,7 +493,7 @@ calc.step = function(t, y, parms)
   # not including the cost-benefit, culling or cost information
   # which is not needed as input (only output)
   pop = matrix(y[1:(N.species * nrow(locs))], N.species, nrow(locs))
-  pop[pop < 0] = 0
+  pop[pop < 1e-3] = 0 # avoiding spurious spreading
 #  dydt = pop*0 
   dydt = matrix(0, N.species, nrow(locs))   # initialise dy/dt information
   season = parms$season # extract current season

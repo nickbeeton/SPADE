@@ -138,6 +138,9 @@ SPADE = function()
   # creates list to store carrying capacity matrix and raster
   K <<- vector('list', N.species)
   K.rast <<- vector('list', N.species)
+  # make sure geometry is calculated when first species' carrying capacity is changed
+  # or when model first run, but left alone otherwise
+  K.changed <<- TRUE 
   # creates list to store initial condition matrix and raster
   IC <<- vector('list', N.species)
   IC.rast <<- vector('list', N.species)

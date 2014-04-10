@@ -382,6 +382,8 @@ K.button.handler = function(h,...)
   allthedata = raster.load.button.handler()
   if (!is.null(allthedata)) # if it worked
   {
+    # make sure geometry is calculated when model run
+    K.changed <<- TRUE
     # set global variables to necessary data
     K.file = allthedata$the.file
     K.rast[[ii]] <<- allthedata$the.rast
@@ -389,9 +391,9 @@ K.button.handler = function(h,...)
     # for global dispersal and fencing information
     # based on the first species' carrying capacity info
     ready = FALSE
-    # set to true if we're defining the first species' CC info for the
-    # first time
-    if (is.null(K[[1]]) & ii == 1) ready = TRUE
+    # set to true if we're defining the first species' CC info
+    # (now set to work ANY time we define it, removed "is.null(K[[1]])" )
+    if (ii == 1) ready = TRUE
     K[[ii]] <<- allthedata$the.data
     svalue(K.label)=allthedata$the.file # set label
     visible(K.plot.raster)=T # select plot window
