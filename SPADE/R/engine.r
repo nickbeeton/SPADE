@@ -289,18 +289,18 @@ run.sim.opt = function(strategy, init.cull, maint.cull, target.density, budget, 
   params$init.cull.abs = strategy.params$init.cull.abs[strategy]
   params$maint.cull.abs = strategy.params$maint.cull.abs[strategy]
   params$target.density = target.density
-  params$cost.int = strategy.params$cost.int[strategy]
-  params$cost.slope = strategy.params$cost.slope[strategy]
-  params$helicopter.cost = strategy.params$helicopter.cost[strategy]
+  params$cb.a = strategy.params$cb.a[strategy]
+  params$cb.b = strategy.params$cb.b[strategy]
+  params$cb.c = strategy.params$cb.c[strategy]
   # including only matrix version and not raster versions
   # as these are not necessary to pass
 #  params$EL = list(strategy.params$EL[[strategy]])
   params$PR = list(strategy.params$PR[[strategy]])
   params$C.mask = list(cull.mask)
   params$TD = list(NULL)
-  params$CI = list(strategy.params$CI[[strategy]])
-  params$CS = list(strategy.params$CS[[strategy]])
-  params$CH = list(strategy.params$CH[[strategy]])
+  params$CB.B = list(strategy.params$CB.B[[strategy]])
+  params$CB.A = list(strategy.params$CB.A[[strategy]])
+  params$CB.C = list(strategy.params$CB.C[[strategy]])
 
   # save the *real* number of strategies
   true.N.strategies = N.strategies

@@ -46,8 +46,8 @@ load_params=function(the_file=NULL,new_file=F){
 ## Save parameters to a new file
 
 save_params=function(the_file="params.csv"){
-  param_list=c('budget','area.target','elev.d.mod','init.cull','maint.cull','target.density','cell.size','r.m','theta','min.d','disp.max','disp.min','cost.int','cost.slope','helicopter.cost','fence.failure', 'fence.build.cost', 'fence.maintain.cost', 'duration', 'timesteps')
-  params = c(budget,area.target,elev.d.mod,init.cull,maint.cull,target.density,cell.size,r.m,theta,min.d,disp.max,disp.min,cost.int,cost.slope,helicopter.cost,fence.failure,fence.build.cost,fence.maintain.cost,duration,timesteps)
+  param_list=c('budget','area.target','elev.d.mod','init.cull','maint.cull','target.density','cell.size','r.m','theta','min.d','disp.max','disp.min','cb.b','cb.a','cb.c','fence.failure', 'fence.build.cost', 'fence.maintain.cost', 'duration', 'timesteps')
+  params = c(budget,area.target,elev.d.mod,init.cull,maint.cull,target.density,cell.size,r.m,theta,min.d,disp.max,disp.min,cb.b,cb.a,cb.c,fence.failure,fence.build.cost,fence.maintain.cost,duration,timesteps)
   save_frame=data.frame(param_list,params,stringsAsFactors=F)
   write.table(save_frame,the_file,col.names=F,row.names=F,sep=",",quote=F)
 }
@@ -55,16 +55,16 @@ save_params=function(the_file="params.csv"){
 #
 update.params = function() # update parameters from edits and spinbuttons before running any sim
 {
-  strategy.params$cull.species <<- svalue(culling.droplist, index=TRUE)
+  if (!is.null(visible(culling.droplist))) strategy.params$cull.species <<- svalue(culling.droplist, index=TRUE)
   budget <<- as.double(svalue(budget.slider))
   area.target <<-svalue(area.target.slider)
   init.cull <<-svalue(init.cull.slider)
   maint.cull <<-svalue(maint.cull.slider)
   target.density <<- as.double(svalue(target.density.slider))
   cell.size <<- as.double(svalue(cell.size.slider))
-  cost.int <<- as.double(svalue(cost.int.slider))
-  cost.slope <<- as.double(svalue(cost.slope.slider))
-  helicopter.cost <<- as.double(svalue(helicopter.cost.slider))
+  cb.b <<- as.double(svalue(cb.b.slider))
+  cb.a <<- as.double(svalue(cb.a.slider))
+  cb.c <<- as.double(svalue(cb.c.slider))
   duration <<- as.double(svalue(duration.slider))
   timesteps <<-svalue(timesteps.slider)
   fence.failure <<- svalue(fence.failure.slider)
@@ -149,7 +149,6 @@ SPADE = function()
   EL.rast <<- vector('list', N.species)
 
 
-
   ## Load initial parameters
   load_params()
   
@@ -213,6 +212,7 @@ SPADE = function()
     # create Interactions tab
     int.group <<- ggroup(container=input.pad,label="Interactions",horizontal=F)
     species.droplist[] <<- species # define droplist elements as new species list
+    if (!is.null(visible(culling.droplist))) culling.droplist[] <<- species
     create.window() # populate Interactions tab
   
     # create Management tab  
@@ -220,7 +220,7 @@ SPADE = function()
     # so it appears in the same place relative to Interactions
     man.group <<- ggroup(container=input.pad, label="Management", horizontal = FALSE) 
     create.man.window() # populate Management tab
-    culling.droplist[] <<- species # update culling droplist with new info  
+    if (!is.null(visible(culling.droplist))) culling.droplist[] <<- species # update culling droplist with new info  
     
     svalue(input.pad) <<- 3  # open Interactions tab (where the action was started)
   }
@@ -295,7 +295,7 @@ SPADE = function()
       man.group <<- ggroup(container=input.pad, label="Management", horizontal = FALSE) 
       create.man.window() # populate Management tab
       species.droplist[] <<- species # update species droplist with new info
-      culling.droplist[] <<- species # update culling droplist with new info
+      if (!is.null(visible(culling.droplist))) culling.droplist[] <<- species # update culling droplist with new info
       svalue(input.pad) <<- 3  # open Interactions tab (where the action was started)
     })
     # If Cancel selected, do nothing and close
@@ -327,7 +327,7 @@ SPADE = function()
     man.group <<- ggroup(container=input.pad, label="Management", horizontal = FALSE) 
     create.man.window() # populate Management tab
     species.droplist[] <<- species # update species droplist with new info
-    culling.droplist[] <<- species # update culling droplist with new info
+    if (!is.null(visible(culling.droplist))) culling.droplist[] <<- species # update culling droplist with new info
 
     svalue(input.pad) <<- 1 # open the Rasters tab
     svalue(raster.pad)=1  # open Dispersal sub-tab
@@ -450,15 +450,26 @@ SPADE = function()
   # Create the Parameters pane
   var.group <<- ggroup(container=input.pad,label="Parameters",horizontal=F)
   
-  # matrix setting
+  # matrix setting (commented out, TODO: reintroduce 'dense' matrices in later version)
   sparse <<- TRUE
-  matrix.group <<- ggroup(container = var.group) # create space for label and radio buttons
-  matrix.label = glabel("Matrix type:", container = matrix.group)
-  addSpring(matrix.group)
-  matrix.method <<- gradio(c("Sparse", "Dense"), container = matrix.group, 
+#  matrix.group <<- ggroup(container = var.group) # create space for label and radio buttons
+#  matrix.label = glabel("Matrix type:", container = matrix.group)
+#  addSpring(matrix.group)
+#  matrix.method <<- gradio(c("Sparse", "Dense"), container = matrix.group, 
+#    handler = function(h,...){ # handler for when method is changed
+#      a = svalue(h$obj, index = TRUE) # extract newly selected method
+#      sparse <<- (a == 1) # decide whether using sparse matrices or not
+#  })
+
+# Google Maps layer
+  gmaps <<- TRUE
+  gmaps.group <<- ggroup(container = var.group) # create space for label and radio buttons
+  gmaps.label = glabel("Google Maps layer:", container = gmaps.group)
+  addSpring(gmaps.group)
+  gmaps.method <<- gradio(c("On", "Off"), container = gmaps.group, 
     handler = function(h,...){ # handler for when method is changed
       a = svalue(h$obj, index = TRUE) # extract newly selected method
-      sparse <<- (a == 1) # decide whether using sparse matrices or not
+      gmaps <<- (a == 1) # decide whether using Google Maps layer or not
   })
   
   # Duration (years)
@@ -476,8 +487,19 @@ SPADE = function()
   time.button <<- gbutton('Apply', container = time.pane, 
     handler = time.button.handler) # Apply button
   
+  modeltype.frame = gframe("Model type:", container = var.group, horizontal = FALSE) # label/frame
+  modeltype <<- gradio(c("Discrete", "Continuous"), selected = 1, container = modeltype.frame, 
+    handler = function(h,...){ # handler for when method is changed
+      a = svalue(h$obj, index = TRUE) # extract newly selected method
+      if (a == 1) 
+        svalue(timesteps.slider) = 1
+      else
+        svalue(timesteps.slider) = 10
+      visible(timesteps.group) = (a == 2)    # visible if "Continuous" is selected
+  })
+  
   # Integration timesteps per season
-  timesteps.group<<-ggroup(container=var.group) # create space for label and edit box
+  timesteps.group<<-ggroup(container=modeltype.frame) # create space for label and edit box
   timesteps.label<<-glabel("Integration timesteps per season",container=timesteps.group) # label
   addSpring(timesteps.group) # make sure edit box is aligned to the right
   timesteps.slider<<-gspinbutton(from=1,to=1000000,by=1,value=timesteps,container=timesteps.group,
@@ -538,9 +560,9 @@ SPADE = function()
   strategy.params <<- list( # information for each strategy
     cull.species = NULL, cull.seasons = NULL, area.target = NULL, culling.choice = NULL, init.cull = NULL, 
     maint.cull = NULL, init.cull.abs = NULL, maint.cull.abs = NULL, target.density = NULL, 
-    cost.int = NULL, cost.slope = NULL, helicopter.cost = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
-    EL.rast = list(NULL), PR.rast = list(NULL), C.rast = list(NULL), TD = list(NULL), CS = list(NULL), CI = list(NULL), CH = list(NULL),
-    CS.rast = list(NULL), CI.rast = list(NULL), CH.rast = list(NULL), TD.rast = list(NULL)
+    cb.b = NULL, cb.a = NULL, cb.c = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
+    EL.rast = list(NULL), PR.rast = list(NULL), C.rast = list(NULL), TD = list(NULL), CB.A = list(NULL), CB.B = list(NULL), CB.C = list(NULL),
+    CB.A.rast = list(NULL), CB.B.rast = list(NULL), CB.C.rast = list(NULL), TD.rast = list(NULL)
   )
   
   # now create management window as defined above
@@ -590,7 +612,7 @@ SPADE = function()
 #      draw.pop.ts(curr.t) # draw using draw.pop.ts routine in spade_ui.r (don't need, covered by slider)
     }))
   
-  anim.but.group[1,3] = (species.droplist <<- gdroplist(items = species, selected = 1, container=anim.but.group, # create droplist to select species to draw raster for
+  anim.but.group[1,3:6, expand = TRUE] = (species.droplist <<- gdroplist(items = species, selected = 1, container=anim.but.group, # create droplist to select species to draw raster for
     handler = function(h,...){ # with handler for when item selected
       curr.species <<- svalue(h$obj, index = TRUE);  # change curr.species based on user decision
       if (is.null(curr.species)) curr.species <<- 1 # if nothing selected, default curr.species to 1
@@ -600,7 +622,32 @@ SPADE = function()
       if ("out" %in% env) draw.pop.ts(curr.t) 
     }))
 
-  anim.but.group[2,1:3, expand = TRUE] = (time.select <<- gslider(from = 0, to = duration, by = 1/seasons, horizontal = TRUE, container = anim.but.group, # create slider to choose time
+  anim.but.group[2,1:2, expand = TRUE] = (save.but <<- gbutton("Save as raster...", container=anim.but.group, # create Save as raster button
+    handler=function(h,...){ # with handler for when button pressed
+      filename=fileSaveChoose("print") # choose filename to save raster file to
+      if(!is.na(filename)){ # if valid filename chosen
+        DATA = K[[1]] # create template for output raster
+        DATA[locs] = out$pop.ts[[curr.t]][curr.species,] # set its values to the current timestep of species data in abundance per cell
+        writeRaster(DATA,filename,format="GTiff") # write raster to file in GTiff format
+      }      
+    }))
+
+  anim.but.group[2,3:4, expand = TRUE] = (ic.but <<- gbutton("Set current as IC", container=anim.but.group, # create Set as IC button
+    handler=function(h,...){ # with handler for when button pressed
+      IC[[curr.species]][locs] <<- out$pop.ts[[curr.t]][curr.species,] # set IC for current species to be its population at current timestep
+      IC.rast[[curr.species]][locs] <<- IC[[curr.species]][locs]      # set IC.rast
+    }))
+
+  anim.but.group[2,5:6, expand = TRUE] = (ic.but <<- gbutton("Set all as IC", container=anim.but.group, # create Set as IC button
+    handler=function(h,...){ # with handler for when button pressed
+      for (i in 1:N.species)
+      {
+        IC[[i]][locs] <<- out$pop.ts[[curr.t]][i,] # set IC for each species to be its population at current timestep  
+        IC.rast[[curr.species]][locs] <<- IC[[curr.species]][locs]  # set IC.rast
+      }        
+    }))
+
+  anim.but.group[3,1:6, expand = TRUE] = (time.select <<- gslider(from = 0, to = duration, by = 1/seasons, horizontal = TRUE, container = anim.but.group, # create slider to choose time
     handler = function(h,...){ # with handler for when slider changed
       curr.t <<- svalue(time.select, index = TRUE) # set timestep to whatever slider is set to
 #      curr.t <<- round(seasons*svalue(time.select)) + 1 

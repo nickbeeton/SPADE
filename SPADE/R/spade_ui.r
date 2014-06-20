@@ -24,23 +24,26 @@ plotdata = function(DATA, ...)
      ymin = attributes(extent(mapRaster))$ymin
      ymax = attributes(extent(mapRaster))$ymax                               
      env = ls('.GlobalEnv')
-     if (!("googlemap" %in% env)) # if the variable 'googlemap' doesn't yet exist in the global env, create it
+     if (!("googlemap" %in% env) & gmaps) # if drawing layer enabled and the variable 'googlemap' doesn't yet exist in the global env, create it
         googlemap <<- try(GetMap.bbox(c(xmin, xmax), c(ymin, ymax)), silent=TRUE) # load map data from Google maps
      # plot the unprojected data (will be drawn over, is used only to initialise the plot)
      sp::plot(mapRaster, alpha = 0.5, col = rev(terrain.colors(255)), smallplot = c(.75,.8,0.2,0.8), asp=1, ...)
      # if there was no error in loading the Google Maps data, draw it
 
-    if (!inherits(googlemap, 'try-error'))   
+    if (gmaps) # if drawing layer enabled
     {
-      givenlatcentre = 0.5*(googlemap$BBOX$ll[1] + googlemap$BBOX$ur[1])
-      givenloncentre = 0.5*(googlemap$BBOX$ll[2] + googlemap$BBOX$ur[2])
-      difflat = googlemap$lat.center - givenlatcentre
-      difflon = googlemap$lon.center - givenloncentre
+      if (!inherits(googlemap, 'try-error'))   # if map data was loaded successfully
+      {
+        givenlatcentre = 0.5*(googlemap$BBOX$ll[1] + googlemap$BBOX$ur[1]) # tweak to line up lat and long values with raster data
+        givenloncentre = 0.5*(googlemap$BBOX$ll[2] + googlemap$BBOX$ur[2])
+        difflat = googlemap$lat.center - givenlatcentre
+        difflon = googlemap$lon.center - givenloncentre
 
-      rasterImage(googlemap[[4]], googlemap$BBOX$ll[1,2]+difflon, googlemap$BBOX$ll[1,1]+difflat,  googlemap$BBOX$ur[1,2]+difflon, googlemap$BBOX$ur[1,1]+difflat)
+        # draw Google Maps info  
+        rasterImage(googlemap[[4]], googlemap$BBOX$ll[1,2]+difflon, googlemap$BBOX$ll[1,1]+difflat,  googlemap$BBOX$ur[1,2]+difflon, googlemap$BBOX$ur[1,1]+difflat)
+      }
     }
-#      rasterImage(googlemap[[4]], bb$lonR[1], bb$latR[1], bb$lonR[2], bb$latR[2])
-#    rasterImage(googlemap[[4]], xmin, ymin, xmax, ymax)
+
     # now plot the unprojected data on top of our Google Maps data (or on its own if that doesn't exist),
     # with 50% transparency so both map and data are clearly visible
      sp::plot(mapRaster, add = TRUE, alpha = 0.5, col = rev(terrain.colors(255)), 

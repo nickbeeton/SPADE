@@ -82,7 +82,7 @@ raster.load.button.handler = function()
     else # otherwise, convert data for output
     {
       if (ext == '.csv') 
-        the.rast = raster(as.matrix(DATA)) # make a raster out of the CSV file
+        the.rast = raster(as.matrix(DATA)) # make a raster out of the csv file
       else
         # read raster into memory (note: this is necessary as DATA itself 
         # doesn't actually contain the raster data - only a reference
@@ -133,9 +133,9 @@ update.strategy.sliders = function()
       strategy.params$init.cull.abs[curr.strategy] <<- as.double(svalue(init.cull.abs.slider))
       strategy.params$maint.cull.abs[curr.strategy] <<- as.double(svalue(maint.cull.abs.slider))        
       strategy.params$target.density[curr.strategy] <<- as.double(svalue(target.density.slider))
-      strategy.params$cost.int[curr.strategy] <<- as.double(svalue(cost.int.slider))
-      strategy.params$cost.slope[curr.strategy] <<- as.double(svalue(cost.slope.slider))
-      strategy.params$helicopter.cost[curr.strategy] <<- as.double(svalue(helicopter.cost.slider))                           
+      strategy.params$cb.a[curr.strategy] <<- as.double(svalue(cb.a.slider))
+      strategy.params$cb.b[curr.strategy] <<- as.double(svalue(cb.b.slider))
+      strategy.params$cb.c[curr.strategy] <<- as.double(svalue(cb.c.slider))                           
   }}
 }
 
@@ -167,7 +167,10 @@ create.man.window = function()
   addSpring(culling.group) # make sure droplist is aligned to the right
   culling.droplist <<- gdroplist(items = species, container=culling.group, selected = 1, # droplist for selecting species to manage with handler
     handler=function(h,...) # handles when option is changed
-      strategy.params$cull.species[curr.strategy] <<- svalue(h$obj, index=TRUE) # set relevant cull.species option to current selected species
+    {
+      if (length(svalue(h$obj, index=TRUE))>0) # if it has a value
+        strategy.params$cull.species[curr.strategy] <<- svalue(h$obj, index=TRUE) # set relevant cull.species option to current selected species
+    }
   )
                         
   seasons.group = ggroup(container = strategy.params.group) # create space for label and checkbox(es)
@@ -189,8 +192,8 @@ create.man.window = function()
     handler=function(h,...) strategy.params$area.target[curr.strategy] <<-svalue(area.target.slider))
                     
   # Create a radio group to select the method of culling
-  # TODO: Add functionality so "absolute" mode culls a percentage up to a maximum (so make all four things visible)
-  culling.method <<- gradio(c("Proportional", "Absolute", "Capped proportional"), container = strategy.params.group, 
+  culling.frame = gframe("Removal method:", container = strategy.params.group, horizontal = FALSE) # label/frame
+  culling.method <<- gradio(c("Proportional", "Absolute", "Capped proportional"), container = culling.frame, 
     handler = function(h,...){ # handler for when method is changed
       a = svalue(h$obj, index = TRUE) # extract newly selected method
       strategy.params$culling.choice[curr.strategy] <<- a # add information to strategy.params
@@ -200,27 +203,27 @@ create.man.window = function()
       visible(maint.cull.abs.group) = (a == 2 | a == 3)                        
   })
   
-  init.cull.group<<-ggroup(container=strategy.params.group) # create space for label and spinbutton
+  init.cull.group<<-ggroup(container=culling.frame) # create space for label and spinbutton
   init.cull.label=glabel("Removal rate in first season",container=init.cull.group) # label
   addSpring(init.cull.group) # make sure spinbutton is aligned to the right
   # slider with handler to set value in strategy.params to spinbutton value when changed
   init.cull.slider <<- gspinbutton(from=0,to=0.99,by=.01,value=strategy.params$init.cull[curr.strategy],container=init.cull.group,
     handler=function(h,...) strategy.params$init.cull[curr.strategy] <<-svalue(init.cull.slider))
     
-  maint.cull.group<<-ggroup(container=strategy.params.group) # create space for label and spinbutton
+  maint.cull.group<<-ggroup(container=culling.frame) # create space for label and spinbutton
   maint.cull.label=glabel("Removal rate after first season",container=maint.cull.group) # label
   addSpring(maint.cull.group) # make sure spinbutton is aligned to the right
   # slider with handler to set value in strategy.params to spinbutton value when changed
   maint.cull.slider <<- gspinbutton(from=0,to=0.99,by=.01,value=strategy.params$maint.cull[curr.strategy],container=maint.cull.group,
     handler=function(h,...) strategy.params$maint.cull[curr.strategy] <<-svalue(maint.cull.slider))
   
-  init.cull.abs.group<<-ggroup(container=strategy.params.group) # create space for label and edit box
+  init.cull.abs.group<<-ggroup(container=culling.frame) # create space for label and edit box
   init.cull.abs.label=glabel("Total removal in first season",container=init.cull.abs.group) # label
   addSpring(init.cull.abs.group) # make sure edit box is aligned to the right
   init.cull.abs.slider<<-gedit(text=strategy.params$init.cull.abs[curr.strategy],container=init.cull.abs.group) # edit box
   visible(init.cull.abs.group) = FALSE # set to originally be invisible (as Proportional mode is selected by default)
   
-  maint.cull.abs.group<<-ggroup(container=strategy.params.group) # create space for label and edit box
+  maint.cull.abs.group<<-ggroup(container=culling.frame) # create space for label and edit box
   maint.cull.abs.label=glabel("Total removal after first season",container=maint.cull.abs.group)# label
   addSpring(maint.cull.abs.group) # make sure edit box is aligned to the right
   maint.cull.abs.slider<<-gedit(text=strategy.params$maint.cull.abs[curr.strategy],container=maint.cull.abs.group) # edit box
@@ -229,47 +232,21 @@ create.man.window = function()
   # create group for spatially implicit definitions
   # so that we can set its visibility depending on whether we're using rasters or not
   # (they start off as visible)
-  spatially.implicit.group <<- ggroup(container = strategy.params.group, horizontal = FALSE) 
+  spatially.implicit.group1 <<- ggroup(container = culling.frame, horizontal = FALSE) 
   
-  target.density.group=ggroup(container=spatially.implicit.group) # create space for label and edit box
+  target.density.group=ggroup(container=spatially.implicit.group1) # create space for label and edit box
   target.density.label=glabel("Species density (per km^2) at which removal stops in a cell",container=target.density.group) # label
   addSpring(target.density.group) # make sure edit box is aligned to the right
   target.density.slider<<-gedit(text=strategy.params$target.density[curr.strategy],container=target.density.group) # edit box
-   
-  cost.int.group=ggroup(container=spatially.implicit.group) # create space for label and edit box       
-  cost.int.label=glabel("Intercept of cost per animal equation",container=cost.int.group) # label
-  addSpring(cost.int.group) # make sure edit box is aligned to the right
-  cost.int.slider<<-gedit(text=strategy.params$cost.int[curr.strategy],container=cost.int.group) # edit box
-  
-  cost.slope.group=ggroup(container=spatially.implicit.group) # create space for label and edit box
-  cost.slope.label=glabel("Slope of cost per animal equation",container=cost.slope.group) # label
-  addSpring(cost.slope.group) # make sure edit box is aligned to the right
-  cost.slope.slider<<-gedit(text=strategy.params$cost.slope[curr.strategy],container=cost.slope.group) # edit box
-  
-  helicopter.cost.group=ggroup(container=spatially.implicit.group) # create space for label and edit box
-  helicopter.cost.label=glabel("Hourly cost of removal",container=helicopter.cost.group) # label
-  addSpring(helicopter.cost.group) # make sure edit box is aligned to the right
-  helicopter.cost.slider<<-gedit(text=strategy.params$helicopter.cost[curr.strategy],container=helicopter.cost.group)  # edit box
 
-  cost.raster.label.group = ggroup(container = strategy.params.group, horizontal = TRUE) # create space for label and checkbox
-  a.label = glabel('Spatially explicit cost:', container = cost.raster.label.group)     
-    
-  # set a variable which defines whether we're using rasters or not
-  # TODO: do we actually need this at all?
-  use.cost.rasters <<- FALSE
-  
-  # create a checkbox that defines whether the strategy uses rasters or spatially homogeneous values
-  cost.raster.check <<- gcheckbox('', checked = use.cost.rasters, container = cost.raster.label.group, 
-    handler = cost.raster.check.handler) # handler in handlers.r
-
-  # create group for spatially explicit definitions
-  # so that we can set its visibility depending on whether we're using rasters or not
+  # create groups for spatially explicit definitions
+  # so that we can set their visibility depending on whether we're using rasters or not
   # (they start off as invisible = value of use.cost.rasters)
-  cost.raster.group <<- ggroup(container=strategy.params.group, horizontal = FALSE)
-  # first group for buttons (stacked horizontally to save space)
-  cost.raster.group1 = ggroup(container=cost.raster.group, horizontal = TRUE)
 
-  # buttons to load rasters from file
+  # first group for buttons (stacked horizontally to save space)
+  cost.raster.group1 <<- ggroup(container=culling.frame, horizontal = TRUE)
+
+  # buttons to load raster from file (spatially explicit)
   TD.button <- gbutton("Load Target Density Raster", container=cost.raster.group1,
     handler=function(h,...){ # handler for when button pressed
       allthedata = raster.load.button.handler() # function to load user-selected data
@@ -283,55 +260,113 @@ create.man.window = function()
         plotdata(strategy.params$TD[[curr.strategy]]) # plot raster                          
       }
     })
-
-  CI.button <- gbutton("Load Cost Intercept Raster", container=cost.raster.group1,
-    handler=function(h,...){ # handler for when button pressed
-      allthedata = raster.load.button.handler() # function to load user-selected data
-      if (!is.null(allthedata)) # if data loaded
+   
+  # Create a radio group to select the cost-benefit method
+  cb.frame = gframe("Cost-benefit method:", container = strategy.params.group, horizontal = FALSE) # label/frame
+  cb.method <<- gradio(c("Power", "Exponential"), container = cb.frame, 
+    handler = function(h,...){ # handler for when method is changed
+      a = svalue(h$obj, index = TRUE) # extract newly selected method
+      strategy.params$cb.choice[curr.strategy] <<- a # add information to strategy.params
+      if (a == 1)
       {
-        # store data in strategy.params
-        strategy.params$CI.rast[[curr.strategy]] <<- allthedata$the.rast 
-        strategy.params$CI[[curr.strategy]] <<- allthedata$the.data
-        visible(CI.plot.raster)=T  # select plot window
-        svalue(strats.raster.pad)=4
-        plotdata(strategy.params$CI[[curr.strategy]]) # plot raster                          
+        svalue(cb.a.label) = "Intercept"
+        svalue(cb.b.label) = "Slope"
+        svalue(cb.c.label) = "Hourly cost"      
+        svalue(CB.A.button) = "Load Intercept Raster"
+        svalue(CB.B.button) = "Load Slope Raster"
+        svalue(CB.C.button) = "Load Hourly Cost Raster"  
       }
-    })
+      else
+      {
+        svalue(cb.a.label) = "Intercept"
+        svalue(cb.b.label) = "Coefficient"
+        svalue(cb.c.label) = "Exponential rate"  
+        svalue(CB.A.button) = "Load Intercept Raster"
+        svalue(CB.B.button) = "Load Coefficient Raster"
+        svalue(CB.C.button) = "Load Exponential Rate Raster" 
+      }
+  })   
+
+  # create group for spatially implicit definitions
+  # so that we can set its visibility depending on whether we're using rasters or not
+  # (they start off as visible)
+  spatially.implicit.group2 <<- ggroup(container = cb.frame, horizontal = FALSE) 
+   
+  cb.a.group=ggroup(container=spatially.implicit.group2) # create space for label and edit box       
+  cb.a.label<<-glabel("Intercept",container=cb.a.group) # label
+  addSpring(cb.a.group) # make sure edit box is aligned to the right
+  cb.a.slider<<-gedit(text=strategy.params$cb.a[curr.strategy],container=cb.a.group) # edit box
+  
+  cb.b.group=ggroup(container=spatially.implicit.group2) # create space for label and edit box
+  cb.b.label<<-glabel("Slope",container=cb.b.group) # label
+  addSpring(cb.b.group) # make sure edit box is aligned to the right
+  cb.b.slider<<-gedit(text=strategy.params$cb.b[curr.strategy],container=cb.b.group) # edit box
+  
+  cb.c.group=ggroup(container=spatially.implicit.group2) # create space for label and edit box
+  cb.c.label<<-glabel("Hourly cost",container=cb.c.group) # label
+  addSpring(cb.c.group) # make sure edit box is aligned to the right
+  cb.c.slider<<-gedit(text=strategy.params$cb.c[curr.strategy],container=cb.c.group)  # edit box
+    
+ 
+  # buttons to load rasters from file
 
   # second group for buttons (stacked horizontally to save space)
 
-  cost.raster.group2 = ggroup(container=cost.raster.group, horizontal = TRUE)
-  
-  CS.button <- gbutton("Load Cost Slope Raster", container=cost.raster.group2,
+  cost.raster.group2 <<- ggroup(container=cb.frame, horizontal = TRUE)
+    
+  CB.A.button <<- gbutton("Load Cost Intercept Raster", container=cost.raster.group2,
     handler=function(h,...){ # handler for when button pressed
       allthedata = raster.load.button.handler() # function to load user-selected data
       if (!is.null(allthedata)) # if data loaded
       {
         # store data in strategy.params
-        strategy.params$CS.rast[[curr.strategy]] <<- allthedata$the.rast 
-        strategy.params$CS[[curr.strategy]] <<- allthedata$the.data
-        visible(CS.plot.raster)=T # select plot window
+        strategy.params$CB.B.rast[[curr.strategy]] <<- allthedata$the.rast 
+        strategy.params$CB.B[[curr.strategy]] <<- allthedata$the.data
+        visible(CB.B.plot.raster)=T  # select plot window
+        svalue(strats.raster.pad)=4
+        plotdata(strategy.params$CB.B[[curr.strategy]]) # plot raster                          
+      }
+    })
+  
+  CB.B.button <<- gbutton("Load Cost Slope Raster", container=cost.raster.group2,
+    handler=function(h,...){ # handler for when button pressed
+      allthedata = raster.load.button.handler() # function to load user-selected data
+      if (!is.null(allthedata)) # if data loaded
+      {
+        # store data in strategy.params
+        strategy.params$CB.A.rast[[curr.strategy]] <<- allthedata$the.rast 
+        strategy.params$CB.A[[curr.strategy]] <<- allthedata$the.data
+        visible(CB.A.plot.raster)=T # select plot window
         svalue(strats.raster.pad)=5
-        plotdata(strategy.params$CS[[curr.strategy]]) # plot raster
+        plotdata(strategy.params$CB.A[[curr.strategy]]) # plot raster
       }
     })
        
-  CH.button <- gbutton("Load Hourly Cost Raster", container=cost.raster.group2,
+  CB.C.button <<- gbutton("Load Hourly Cost Raster", container=cost.raster.group2,
     handler=function(h,...){ # handler for when button pressed
       allthedata = raster.load.button.handler() # function to load user-selected data
       if (!is.null(allthedata)) # if data loaded
       {
         # store data in strategy.params
-        strategy.params$CH.rast[[curr.strategy]] <<- allthedata$the.rast 
-        strategy.params$CH[[curr.strategy]] <<- allthedata$the.data
-        visible(CH.plot.raster)=T # select plot window
+        strategy.params$CB.C.rast[[curr.strategy]] <<- allthedata$the.rast 
+        strategy.params$CB.C[[curr.strategy]] <<- allthedata$the.data
+        visible(CB.C.plot.raster)=T # select plot window
         svalue(strats.raster.pad)=6
-        plotdata(strategy.params$CH[[curr.strategy]]) # plot raster                          
+        plotdata(strategy.params$CB.C[[curr.strategy]]) # plot raster                          
       }
     })                      
+
+  cost.raster.label.group = ggroup(container = strategy.params.group, horizontal = TRUE) # create space for label and checkbox
+  a.label = glabel('Spatially explicit cost and target density:', container = cost.raster.label.group)    
+  # set a variable which defines whether we're using rasters for management or not (initialise to false)
+  use.cost.rasters <<- FALSE
+  # create a checkbox that defines whether the strategy uses rasters or spatially homogeneous values
+  cost.raster.check <<- gcheckbox('', checked = use.cost.rasters, container = cost.raster.label.group, 
+    handler = cost.raster.check.handler) # handler in handlers.r
   
   # set visibility of raster group (initially false)
-  visible(cost.raster.group) = use.cost.rasters                       
+  visible(cost.raster.group1) = use.cost.rasters                       
+  visible(cost.raster.group2) = use.cost.rasters     
 
   # buttons to load Priority and Culling Mask rasters from file      
   # (always visible as opposed to above four buttons)
@@ -443,68 +478,68 @@ create.man.window = function()
     })      
             
   # create a tab in the notebook for the Cost Intercept raster           
-  CI.plot.group <- ggroup(container=strats.raster.pad,label="Cost Intercept",horizontal=F)
-  CI.plot.raster <<- ggraphics(container=CI.plot.group) # create plot window for tab
-  CI.plot.buttons <- ggroup(container = CI.plot.group, horizontal = TRUE) # create space for buttons             
-  CI.plot.edit <- gbutton("Edit",container=CI.plot.buttons, # Edit button
+  CB.B.plot.group <- ggroup(container=strats.raster.pad,label="Cost Intercept",horizontal=F)
+  CB.B.plot.raster <<- ggraphics(container=CB.B.plot.group) # create plot window for tab
+  CB.B.plot.buttons <- ggroup(container = CB.B.plot.group, horizontal = TRUE) # create space for buttons             
+  CB.B.plot.edit <- gbutton("Edit",container=CB.B.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
-      strategy.params$CI[[curr.strategy]] <<- edit(strategy.params$CI[[curr.strategy]])
-      visible(CI.plot.raster)=T # select plot window
+      strategy.params$CB.B[[curr.strategy]] <<- edit(strategy.params$CB.B[[curr.strategy]])
+      visible(CB.B.plot.raster)=T # select plot window
       svalue(strats.raster.pad)=4
-      strategy.params$CI.rast[[curr.strategy]] <<- raster(strategy.params$CI[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-      plotdata(strategy.params$CI[[curr.strategy]]) # plot raster
+      strategy.params$CB.B.rast[[curr.strategy]] <<- raster(strategy.params$CB.B[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+      plotdata(strategy.params$CB.B[[curr.strategy]]) # plot raster
     })
-  CI.plot.save <- gbutton("Save",container=CI.plot.buttons, # Save button
+  CB.B.plot.save <- gbutton("Save",container=CB.B.plot.buttons, # Save button
     handler=function(h,...){ # handler for when button pressed
       filename=fileSaveChoose("print") # choose filename to save raster file to
       if(!is.na(filename)){ # if valid filename chosen
-        strategy.params$CI.rast[[curr.strategy]] <<- raster(strategy.params$CI[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-        writeRaster(strategy.params$CI.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
+        strategy.params$CB.B.rast[[curr.strategy]] <<- raster(strategy.params$CB.B[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+        writeRaster(strategy.params$CB.B.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
       }
     })      
 
   # create a tab in the notebook for the Cost Slope raster     
-  CS.plot.group <- ggroup(container=strats.raster.pad,label="Cost Slope",horizontal=F)
-  CS.plot.raster <<- ggraphics(container=CS.plot.group) # create plot window for tab
-  CS.plot.buttons <- ggroup(container = CS.plot.group, horizontal = TRUE) # create space for buttons             
-  CS.plot.edit <- gbutton("Edit",container=CS.plot.buttons, # Edit button
+  CB.A.plot.group <- ggroup(container=strats.raster.pad,label="Cost Slope",horizontal=F)
+  CB.A.plot.raster <<- ggraphics(container=CB.A.plot.group) # create plot window for tab
+  CB.A.plot.buttons <- ggroup(container = CB.A.plot.group, horizontal = TRUE) # create space for buttons             
+  CB.A.plot.edit <- gbutton("Edit",container=CB.A.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
-      strategy.params$CS[[curr.strategy]] <<- edit(strategy.params$CS[[curr.strategy]])
-      visible(CS.plot.raster)=T # select plot window
+      strategy.params$CB.A[[curr.strategy]] <<- edit(strategy.params$CB.A[[curr.strategy]])
+      visible(CB.A.plot.raster)=T # select plot window
       svalue(strats.raster.pad)=5
-      strategy.params$CS.rast[[curr.strategy]]<<-raster(strategy.params$CS[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-      plotdata(strategy.params$CS[[curr.strategy]]) # plot raster
+      strategy.params$CB.A.rast[[curr.strategy]]<<-raster(strategy.params$CB.A[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+      plotdata(strategy.params$CB.A[[curr.strategy]]) # plot raster
     })
-  CS.plot.save <- gbutton("Save",container=CS.plot.buttons, # Save button
+  CB.A.plot.save <- gbutton("Save",container=CB.A.plot.buttons, # Save button
     handler=function(h,...){ # handler for when button pressed
       filename=fileSaveChoose("print") # choose filename to save raster file to
       if(!is.na(filename)){ # if valid filename chosen
-        strategy.params$CS.rast[[curr.strategy]]<<-raster(strategy.params$CS[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-        writeRaster(strategy.params$CS.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
+        strategy.params$CB.A.rast[[curr.strategy]]<<-raster(strategy.params$CB.A[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+        writeRaster(strategy.params$CB.A.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
       }
     })   
   
   # create a tab in the notebook for the Hourly Cost raster   
-  CH.plot.group <- ggroup(container=strats.raster.pad,label="Hourly Cost",horizontal=F)
-  CH.plot.raster <<- ggraphics(container=CH.plot.group) # create plot window for tab
-  CH.plot.buttons <- ggroup(container = CH.plot.group, horizontal = TRUE) # create space for buttons            
-  CH.plot.edit <- gbutton("Edit",container=CH.plot.buttons, # Edit button
+  CB.C.plot.group <- ggroup(container=strats.raster.pad,label="Hourly Cost",horizontal=F)
+  CB.C.plot.raster <<- ggraphics(container=CB.C.plot.group) # create plot window for tab
+  CB.C.plot.buttons <- ggroup(container = CB.C.plot.group, horizontal = TRUE) # create space for buttons            
+  CB.C.plot.edit <- gbutton("Edit",container=CB.C.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results    
-      strategy.params$CH[[curr.strategy]] <<- edit(strategy.params$CH[[curr.strategy]])
-      visible(CH.plot.raster)=T # select plot window
+      strategy.params$CB.C[[curr.strategy]] <<- edit(strategy.params$CB.C[[curr.strategy]])
+      visible(CB.C.plot.raster)=T # select plot window
       svalue(strats.raster.pad)=6
-      strategy.params$CH.rast[[curr.strategy]]<<-raster(strategy.params$CH[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-      plotdata(strategy.params$CH[[curr.strategy]]) # plot raster
+      strategy.params$CB.C.rast[[curr.strategy]]<<-raster(strategy.params$CB.C[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+      plotdata(strategy.params$CB.C[[curr.strategy]]) # plot raster
     })
-  CH.plot.save <- gbutton("Save",container=CH.plot.buttons, # Save button
+  CB.C.plot.save <- gbutton("Save",container=CB.C.plot.buttons, # Save button
   handler=function(h,...){ # handler for when button pressed
     filename=fileSaveChoose("print") # choose filename to save raster file to
     if(!is.na(filename)){ # if valid filename chosen
-      strategy.params$CH.rast[[curr.strategy]]<<-raster(strategy.params$CH[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
-      writeRaster(strategy.params$CH.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
+      strategy.params$CB.C.rast[[curr.strategy]]<<-raster(strategy.params$CB.C[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
+      writeRaster(strategy.params$CB.C.rast[[curr.strategy]],filename,format="GTiff") # write raster to file in GTiff format
     }
   })                                      
                                                                  

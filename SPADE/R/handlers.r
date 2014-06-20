@@ -88,9 +88,9 @@ sdh = function(h=NULL, ...)
     svalue(init.cull.abs.slider) = strategy.params$init.cull.abs[curr.strategy]
     svalue(maint.cull.abs.slider) = strategy.params$maint.cull.abs[curr.strategy]
     svalue(target.density.slider) = strategy.params$target.density[curr.strategy]
-    svalue(cost.int.slider) = strategy.params$cost.int[curr.strategy]
-    svalue(cost.slope.slider) = strategy.params$cost.slope[curr.strategy]
-    svalue(helicopter.cost.slider) = strategy.params$helicopter.cost[curr.strategy]
+    svalue(cb.a.slider) = strategy.params$cb.a[curr.strategy]
+    svalue(cb.b.slider) = strategy.params$cb.b[curr.strategy]
+    svalue(cb.c.slider) = strategy.params$cb.c[curr.strategy]
   }
 }
 
@@ -106,13 +106,6 @@ add.strategy.handler = function(h,...)
 
     # stored param values into strategy.params from numbers currently on gtext objects (using previous droplist place)
     update.strategy.sliders()
-# TODO: delete these if u.s.s works
-#      strategy.params$init.cull.abs[curr.strategy] <<- as.double(svalue(init.cull.abs.slider))
-#      strategy.params$maint.cull.abs[curr.strategy] <<- as.double(svalue(maint.cull.abs.slider))
-#      strategy.params$target.density[curr.strategy] <<- as.double(svalue(target.density.slider))
-#      strategy.params$cost.int[curr.strategy] <<- as.double(svalue(cost.int.slider))
-#      strategy.params$cost.slope[curr.strategy] <<- as.double(svalue(cost.slope.slider))
-#      strategy.params$helicopter.cost[curr.strategy] <<- as.double(svalue(helicopter.cost.slider))
 
     # store defaults to strategy.params
     strategy.params$cull.species[N.strategies] <<- 1
@@ -124,9 +117,9 @@ add.strategy.handler = function(h,...)
     strategy.params$init.cull.abs[N.strategies] <<- 1000
     strategy.params$maint.cull.abs[N.strategies] <<- 1000
     strategy.params$target.density[N.strategies] <<- 1
-    strategy.params$cost.int[N.strategies] <<- 0.1464
-    strategy.params$cost.slope[N.strategies] <<- -1.445
-    strategy.params$helicopter.cost[N.strategies] <<- 1180
+    strategy.params$cb.a[N.strategies] <<- 0.1464
+    strategy.params$cb.b[N.strategies] <<- -1.445
+    strategy.params$cb.c[N.strategies] <<- 1180
     # all rasters here default to 1 everywhere, using template of first carrying capacity raster
 #    strategy.params$EL.rast[[N.strategies]] <<- K.rast[[1]]*0 + 1
 #    strategy.params$EL[[N.strategies]] <<- raster::as.matrix(strategy.params$EL.rast[[N.strategies]])
@@ -137,12 +130,12 @@ add.strategy.handler = function(h,...)
     # other rasters default to null
     strategy.params$TD.rast[[N.strategies]] <<- list()
     strategy.params$TD[[N.strategies]] <<- list()
-    strategy.params$CI.rast[[N.strategies]] <<- list()
-    strategy.params$CI[[N.strategies]] <<- list()
-    strategy.params$CS.rast[[N.strategies]] <<- list()
-    strategy.params$CS[[N.strategies]] <<- list()
-    strategy.params$CH.rast[[N.strategies]] <<- list()
-    strategy.params$CH[[N.strategies]] <<- list()
+    strategy.params$CB.B.rast[[N.strategies]] <<- list()
+    strategy.params$CB.B[[N.strategies]] <<- list()
+    strategy.params$CB.A.rast[[N.strategies]] <<- list()
+    strategy.params$CB.A[[N.strategies]] <<- list()
+    strategy.params$CB.C.rast[[N.strategies]] <<- list()
+    strategy.params$CB.C[[N.strategies]] <<- list()
 
     if (N.strategies > 1) # if we already started with one or more strategies, add new strategy to the end of the droplist
       strategies.droplist[] = c(strategies.droplist[], sprintf("Strategy %d", strategy.no))
@@ -194,9 +187,9 @@ rem.strategy.handler =  handler = function(h, ...){
       strategy.params = list( # re-initialise strategy.params
         cull.species = NULL, cull.seasons = NULL, area.target = NULL, culling.choice = NULL, init.cull = NULL,
         maint.cull = NULL, init.cull.abs = NULL, maint.cull.abs = NULL, target.density = NULL,
-        cost.int = NULL, cost.slope = NULL, helicopter.cost = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
-        EL.rast = list(NULL), PR.rast = list(NULL), C.rast = list(NULL), CS = list(NULL), TD = list(NULL), CI = list(NULL), CH = list(NULL),
-        CS.rast = list(NULL), CI.rast = list(NULL), CH.rast = list(NULL), TD.rast = list(NULL)
+        cb.a = NULL, cb.b = NULL, cb.c = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
+        EL.rast = list(NULL), PR.rast = list(NULL), C.rast = list(NULL), CB.A = list(NULL), TD = list(NULL), CB.B = list(NULL), CB.C = list(NULL),
+        CB.A.rast = list(NULL), CB.B.rast = list(NULL), CB.C.rast = list(NULL), TD.rast = list(NULL)
       )
     }
     else # if there are still other strategies left post-deletion
@@ -212,9 +205,9 @@ rem.strategy.handler =  handler = function(h, ...){
       strategy.params$init.cull.abs <<- strategy.params$init.cull.abs[-p]
       strategy.params$maint.cull.abs <<- strategy.params$maint.cull.abs[-p]
       strategy.params$target.density <<- strategy.params$target.density[-p]
-      strategy.params$cost.int <<- strategy.params$cost.int[-p]
-      strategy.params$cost.slope <<- strategy.params$cost.slope[-p]
-      strategy.params$helicopter.cost <<- strategy.params$helicopter.cost[-p]
+      strategy.params$cb.a <<- strategy.params$cb.a[-p]
+      strategy.params$cb.b <<- strategy.params$cb.b[-p]
+      strategy.params$cb.c <<- strategy.params$cb.c[-p]
 #      strategy.params$EL.rast[[p]] <<- NULL 
 #      strategy.params$EL[[p]] <<- NULL
       strategy.params$PR.rast[[p]] <<- NULL  # note: setting an element of a list to NULL removes it entirely!
@@ -223,12 +216,12 @@ rem.strategy.handler =  handler = function(h, ...){
       strategy.params$C.mask[[p]] <<- NULL
       strategy.params$TD.rast[[p]] <<- NULL
       strategy.params$TD[[p]] <<- NULL
-      strategy.params$CI.rast[[p]] <<- NULL
-      strategy.params$CI[[p]] <<- NULL
-      strategy.params$CS.rast[[p]] <<- NULL
-      strategy.params$CS[[p]] <<- NULL
-      strategy.params$CH.rast[[p]] <<- NULL
-      strategy.params$CH[[p]] <<- NULL
+      strategy.params$CB.B.rast[[p]] <<- NULL
+      strategy.params$CB.B[[p]] <<- NULL
+      strategy.params$CB.A.rast[[p]] <<- NULL
+      strategy.params$CB.A[[p]] <<- NULL
+      strategy.params$CB.C.rast[[p]] <<- NULL
+      strategy.params$CB.C[[p]] <<- NULL
       strategies.droplist[] = strategies.droplist[-p] # finally, remove the strategy from the droplist
       # set the currently displayed strategy to the element after the removed element, or,
       # if the last element was removed, the newly-last element
@@ -245,32 +238,34 @@ cost.raster.check.handler = function(h,...)
   # ensures that strategy.params is up to date before changing things
   update.strategy.sliders()
   use.cost.rasters <<- svalue(h$obj) # set whether we're using rasters based on the check box
-  visible(cost.raster.group) = use.cost.rasters # set visibility of the two separate groups
-  visible(spatially.implicit.group) = !use.cost.rasters
+  visible(cost.raster.group1) = use.cost.rasters # set visibility of the four separate groups
+  visible(cost.raster.group2) = use.cost.rasters
+  visible(spatially.implicit.group1) = !use.cost.rasters
+  visible(spatially.implicit.group2) = !use.cost.rasters
   if (use.cost.rasters) # if we are using rasters
   {
     # set each raster to be the previously defined values for each cell, using the first species'
     # carrying capacity as a template
     strategy.params$TD.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$target.density[curr.strategy]
     strategy.params$TD[[N.strategies]] <<- raster::as.matrix(strategy.params$TD.rast[[N.strategies]])
-    strategy.params$CI.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$cost.int[curr.strategy]
-    strategy.params$CI[[N.strategies]] <<- raster::as.matrix(strategy.params$CI.rast[[N.strategies]])
-    strategy.params$CS.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$cost.slope[curr.strategy]
-    strategy.params$CS[[N.strategies]] <<- raster::as.matrix(strategy.params$CS.rast[[N.strategies]])
-    strategy.params$CH.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$helicopter.cost[curr.strategy]
-    strategy.params$CH[[N.strategies]] <<- raster::as.matrix(strategy.params$CH.rast[[N.strategies]])
+    strategy.params$CB.B.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$cb.b[curr.strategy]
+    strategy.params$CB.B[[N.strategies]] <<- raster::as.matrix(strategy.params$CB.B.rast[[N.strategies]])
+    strategy.params$CB.A.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$cb.a[curr.strategy]
+    strategy.params$CB.A[[N.strategies]] <<- raster::as.matrix(strategy.params$CB.A.rast[[N.strategies]])
+    strategy.params$CB.C.rast[[N.strategies]] <<- K.rast[[1]]*0 + strategy.params$cb.c[curr.strategy]
+    strategy.params$CB.C[[N.strategies]] <<- raster::as.matrix(strategy.params$CB.C.rast[[N.strategies]])
   }
   else # if we are using a single value
   {
     # set all the rasters to null
     strategy.params$TD.rast[[N.strategies]] <<- list()
     strategy.params$TD[[N.strategies]] <<- list()
-    strategy.params$CI.rast[[N.strategies]] <<- list()
-    strategy.params$CI[[N.strategies]] <<- list()
-    strategy.params$CS.rast[[N.strategies]] <<- list()
-    strategy.params$CS[[N.strategies]] <<- list()
-    strategy.params$CH.rast[[N.strategies]] <<- list()
-    strategy.params$CH[[N.strategies]] <<- list()
+    strategy.params$CB.B.rast[[N.strategies]] <<- list()
+    strategy.params$CB.B[[N.strategies]] <<- list()
+    strategy.params$CB.A.rast[[N.strategies]] <<- list()
+    strategy.params$CB.A[[N.strategies]] <<- list()
+    strategy.params$CB.C.rast[[N.strategies]] <<- list()
+    strategy.params$CB.C[[N.strategies]] <<- list()
   }
 
   visible(TD.plot.raster)=T # set the plot window
@@ -278,17 +273,17 @@ cost.raster.check.handler = function(h,...)
   # plot the raster (note: plotdata can handle null rasters)
   plotdata(strategy.params$TD[[curr.strategy]])
 
-  visible(CI.plot.raster)=T # set the plot window
+  visible(CB.B.plot.raster)=T # set the plot window
   svalue(strats.raster.pad)=4
-  plotdata(strategy.params$CI[[curr.strategy]]) # plot the raster
+  plotdata(strategy.params$CB.B[[curr.strategy]]) # plot the raster
 
-  visible(CS.plot.raster)=T # set the plot window
+  visible(CB.A.plot.raster)=T # set the plot window
   svalue(strats.raster.pad)=5
-  plotdata(strategy.params$CS[[curr.strategy]]) # plot the raster
+  plotdata(strategy.params$CB.A[[curr.strategy]]) # plot the raster
 
-  visible(CH.plot.raster)=T # set the plot window
+  visible(CB.C.plot.raster)=T # set the plot window
   svalue(strats.raster.pad)=6
-  plotdata(strategy.params$CH[[curr.strategy]])  # plot the raster
+  plotdata(strategy.params$CB.C[[curr.strategy]])  # plot the raster
 }
 
 time.slider.handler = function(h,...) # handler for when number is changed in a time slider
@@ -432,7 +427,7 @@ prop.abs.cull.calc = function(pop, p, abs, TD, eps, cull.mask) # capped proporti
   if (length(ii) > 0) # if there is anything to do
   {
     p.abs = abs/sum(pop[ii]*cull.mask[ii]) # proportion to be culled to reach maximum absolute cull (abs)
-  
+
     # proportion of pop that can be culled before reaching minimum density, 
     # scaled by mask (lower mask value means lower practical cull rate compared to others, meaning higher overall cull rate possible)
     p.lim = (1 - eps/pop[ii])/cull.mask[ii]
@@ -618,23 +613,32 @@ calc.cull = function(pop, t, t2, params, cull.mask)
       #                CULL = rep(params$maint.cull.abs[i]/cull.cells[i], length(pop[s,]))
             }            
           }
-          else # continuous model (note: only up to absolute removal rate, not absolute removal per unit time)
+          else # continuous model
           {
-  
             CULL = pop[s,] * 0 # initialise
             CULL[pop[s,] > TD.curr & pop[s,] > eps] = 1 # mark removable cells
             CULL = CULL * cull.mask[[i]] # mask out unmanaged (or partly managed) areas
             
             if (t == 1)  # if in first timestep, perform 'initial' management, otherwise do 'maintenance'
             {
-              CULL = CULL * params$init.cull.abs[i] / sum(CULL) # calculate absolute limits
-              CULL = pmin.int(CULL, pop[s,] * params$init.cull[i] * cull.mask[[i]]) # replace with proportional where lower (scaled by cull.mask)
+              cull.abs = params$init.cull.abs[i]
+              cull.prop = params$init.cull[i]
             }
             else
             {
-              CULL = CULL * params$maint.cull.abs[i] / sum(CULL)  # calculate absolute limits
-              CULL = pmin.int(CULL, pop[s,] * params$maint.cull[i] * cull.mask[[i]]) # replace with proportional where lower (scaled by cull.mask)
+              cull.abs = params$maint.cull.abs[i]
+              cull.prop = params$maint.cull[i]
             }
+              
+            # calculate rate required to remove absolute number at based on constant overall rate
+            # (note that removal is still proportional between cells)
+            p.abs = 1 - exp(-cull.abs / (sum(CULL * pop[s,])))
+            
+            # if the user-set proportion is too high, set to the absolute number rate
+            if (cull.prop > p.abs) cull.prop = p.abs
+            
+            # set rate as for continuous proportional model
+            CULL = pop[s,] * CULL * -log(1-cull.prop)
           }
         }
     
@@ -652,26 +656,35 @@ calc.cull = function(pop, t, t2, params, cull.mask)
     
 
         
-        if (length(params$CI) > 0) # if there are actually any elements in cost intercept raster
+        if (length(params$CB.A) > 0) # if there are actually any elements in cost intercept raster
         {
-          if (length(params$CI[[i]]) > 0) # additionally, if the current element has content
+          if (length(params$CB.A[[i]]) > 0) # additionally, if the current element has content
           {
             # work out cost of managing each cell using cost intercept, slope and hourly cost rasters
             # TODO: allow multiple types of cost/density
-#            CC = round(((params$CI[[i]][locs]*(pop[s,]/cell.size)^params$CS[[i]][locs])*CULL*params$CH[[i]][locs]),0) 
-            CC = CULL * (params$CI[[i]][locs] + params$CS[[i]][locs] * exp(-params$CH[[i]][locs] * (pop[s,] / cell.size)))
+            if (svalue(cb.method, index = TRUE) == 1)
+              CC = (params$CB.A[[i]][locs]*(pop[s,]/cell.size)^params$CB.B[[i]][locs])*CULL*params$CB.C[[i]][locs]
+            else
+              CC = CULL * (params$CB.A[[i]][locs] + params$CB.B[[i]][locs] * exp(-params$CB.C[[i]][locs] * (pop[s,] / cell.size)))
           }
           else
           {
             # work out cost of managing each cell using the set values
-#            CC = round(((params$cost.int[i]*(pop[s,]/cell.size)^params$cost.slope[i])*CULL*params$helicopter.cost[i]),0) 
-            CC = CULL * (params$cost.int[i] + params$cost.slope[i] * exp(-params$helicopter.cost[i] * (pop[s,] / cell.size)))
+            if (svalue(cb.method, index = TRUE) == 1)  
+              CC = (params$cb.a[i]*(pop[s,]/cell.size)^params$cb.b[i])*CULL*params$cb.c[i]
+            else
+              CC = CULL * (params$cb.a[i] + params$cb.b[i] * exp(-params$cb.c[i] * (pop[s,] / cell.size)))
           }
         }
         else # work out cost of managing each cell using the set values
-          CC = round(((params$cost.int[i]*(pop[s,]/cell.size)^params$cost.slope[i])*CULL*params$helicopter.cost[i]),0)
+        {
+          if (svalue(cb.method, index = TRUE) == 1)  
+            CC = (params$cb.a[i]*(pop[s,]/cell.size)^params$cb.b[i])*CULL*params$cb.c[i]
+          else
+            CC = CULL * (params$cb.a[i] + params$cb.b[i] * exp(-params$cb.c[i] * (pop[s,] / cell.size)))
+        }        
         
-        # pop^cost.slope can be inf, so fixing up any cases where Inf * 0 = NaN, should be 0
+        # pop^cb.a can be inf, so fixing up any cases where Inf * 0 = NaN, should be 0
         CC[is.nan(CC)] = 0 
         
         CC = CC + fence.maintain.cost * fence.place # fencing maintain cost every timestep

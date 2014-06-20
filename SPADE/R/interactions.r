@@ -64,12 +64,15 @@ vars.update = function(h,...)
 
   if (istime) curr.time <<- 1:seasons # if necessary, save edit boxes to ALL timesteps
 
-  for (i in 1:N.species) tickboxes[i, curr.time] <<- svalue(boxes[[i]]) # save box information to tickboxes 
+  env = ls('.GlobalEnv')
+  if (id(h$obj) != 1) # if not predator-prey (doesn't include tickboxes - TODO: include multiple classes in pred-prey models)
+    for (i in 1:N.species) tickboxes[i, curr.time] <<- svalue(boxes[[i]]) # save box information to tickboxes 
   # (which is directly transferred to the interactions object in update.elements)
   
   funcresp[curr.time] <<- svalue(settings.funcresp, index = TRUE) # set functional response to value specified in droplist
   # extract all possible unique variables for all formulas for interactions of the selected type
   variables.list = unique(unlist(strsplit(as.character(func.forms$Variables), ' ')))
+  diff.variables.list = NULL
   if (id(h$obj) == 2) # if called from demographics (window includes diffusion)
   {
     diffresp <<- svalue(settings.diffresp, index = TRUE) # set diffusion response to value specified in droplist
@@ -490,7 +493,7 @@ button.handler = function(h,...)
       handler=function(h,...){ # with handler for when button pressed
         IC[[ii]] <<- edit(IC[[ii]]) # use R's inbuilt editor to edit the raster
         visible(IC.plot.raster)=T # select plot window
-        IC.rast[[ii]]=raster(IC[[ii]]) # create raster from changed matrix (TODO: use K[[1]] as a template so we keep projection info)
+        IC.rast[[ii]][locs]=IC[[ii]][locs] # create raster from changed matrix
         plotdata(IC[[ii]]/cell.size, main = 'Density (per km^2)') # plot data (density, not abundance)
       })
       
@@ -499,7 +502,7 @@ button.handler = function(h,...)
       handler=function(h,...){ # with handler for when button pressed
         filename=fileSaveChoose("print") # user selects a filename to save to
         if(!is.na(filename)){ # if valid filename selected
-          IC.rast[[ii]]=raster(IC[[ii]])  # create raster from current matrix (TODO: use K[[1]] as a template so we keep projection info)
+          IC.rast[[ii]][locs]=IC[[ii]][locs]  # create raster from current matrix
           writeRaster(IC.rast[[ii]],filename,format="GTiff") # write in GTiff format to filename
         }
       }) 
@@ -787,6 +790,7 @@ change.handler = function(h,...)
     svalue(species.labels.left[[ij]]) = species[ij]; # update left label with species name
     svalue(species.labels.top[[ij]]) = species[ij]; # update top label
     species.droplist[] <<- species # update species droplist, including new value
+    if (!is.null(visible(culling.droplist))) culling.droplist[] <<- species # define droplist elements as new species list    
     dispose(change.name) # remove window
   })
 }
