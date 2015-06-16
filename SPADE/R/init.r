@@ -46,8 +46,8 @@ load_params=function(the_file=NULL,new_file=F){
 ## Save parameters to a new file
 
 save_params=function(the_file="params.csv"){
-  param_list=c('budget','area.target','elev.d.mod','init.cull','maint.cull','target.density','cell.size','r.m','theta','min.d','disp.max','disp.min','cb.b','cb.a','cb.c','fence.failure', 'fence.build.cost', 'fence.maintain.cost', 'duration', 'timesteps')
-  params = c(budget,area.target,elev.d.mod,init.cull,maint.cull,target.density,cell.size,r.m,theta,min.d,disp.max,disp.min,cb.b,cb.a,cb.c,fence.failure,fence.build.cost,fence.maintain.cost,duration,timesteps)
+  param_list=c('budget','area.target','elev.d.mod','init.cull','maint.cull','target.density','cell.size.x','cell.size.y','r.m','theta','min.d','disp.max','disp.min','cb.b','cb.a','cb.c','fence.failure', 'fence.build.cost', 'fence.maintain.cost', 'duration', 'timesteps')
+  params = c(budget,area.target,elev.d.mod,init.cull,maint.cull,target.density,cell.size.x,cell.size.y,r.m,theta,min.d,disp.max,disp.min,cb.b,cb.a,cb.c,fence.failure,fence.build.cost,fence.maintain.cost,duration,timesteps)
   save_frame=data.frame(param_list,params,stringsAsFactors=F)
   write.table(save_frame,the_file,col.names=F,row.names=F,sep=",",quote=F)
 }
@@ -55,13 +55,19 @@ save_params=function(the_file="params.csv"){
 #
 update.params = function() # update parameters from edits and spinbuttons before running any sim
 {
-  if (!is.null(visible(culling.droplist))) strategy.params$cull.species <<- svalue(culling.droplist, index=TRUE)
+  if (!is.null(visible(culling.droplist))) strategy.params$cull.species[svalue(strategies.droplist, index = TRUE)] <<- svalue(culling.droplist, index=TRUE)
   budget <<- as.double(svalue(budget.slider))
   area.target <<-svalue(area.target.slider)
   init.cull <<-svalue(init.cull.slider)
   maint.cull <<-svalue(maint.cull.slider)
   target.density <<- as.double(svalue(target.density.slider))
-  cell.size <<- as.double(svalue(cell.size.slider))
+  if (cell.size.x != as.double(svalue(cell.size.x.slider)) |  cell.size.y != as.double(svalue(cell.size.y.slider))) # if values have changed since last time
+  {
+    cell.size.x <<- as.double(svalue(cell.size.x.slider))
+    cell.size.y <<- as.double(svalue(cell.size.y.slider))
+    K.changed <<- TRUE # make sure geometry is redone
+  }
+  cell.size <<- cell.size.x * cell.size.y
   cb.b <<- as.double(svalue(cb.b.slider))
   cb.a <<- as.double(svalue(cb.a.slider))
   cb.c <<- as.double(svalue(cb.c.slider))
@@ -511,11 +517,18 @@ SPADE = function()
   addSpring(budget.group) # make sure edit box is aligned to the right
   budget.slider<<-gedit(text=budget,container=budget.group) # edit box
   
-  # Cell size (km^2)
-  cell.size.group<<-ggroup(container=var.group) # create space for label and edit box
-  cell.size.label<<-glabel("Cell size (km^2)",container=cell.size.group)  # label
-  addSpring(cell.size.group) # make sure edit box is aligned to the right
-  cell.size.slider<<-gedit(text=cell.size,container=cell.size.group) # edit box
+  # Cell width and length (km^2)
+  cell.size.x.group<<-ggroup(container=var.group) # create space for label and edit box
+  cell.size.x.label<<-glabel("Cell width (km)",container=cell.size.x.group)  # label
+  addSpring(cell.size.x.group) # make sure edit box is aligned to the right
+  cell.size.x.slider<<-gedit(text=cell.size.x,container=cell.size.x.group, # edit box
+    handler = function(h,...) {cell.size.x <<- as.numeric(svalue(cell.size.x.slider)); cell.size = cell.size.x * cell.size.y; K.changed <<- TRUE}  ) 
+  
+  cell.size.y.group<<-ggroup(container=var.group) # create space for label and edit box
+  cell.size.y.label<<-glabel("Cell height (km)",container=cell.size.y.group)  # label
+  addSpring(cell.size.y.group) # make sure edit box is aligned to the right
+  cell.size.y.slider<<-gedit(text=cell.size.y,container=cell.size.y.group, # edit box
+    handler = function(h,...) {cell.size.y <<- as.numeric(svalue(cell.size.y.slider)); cell.size = cell.size.x * cell.size.y; K.changed <<- TRUE}  )
   
   fence.failure.group<<-ggroup(container=var.group) # create space for label and edit box
   fence.failure.label<<-glabel("Fence failure rate",container=fence.failure.group) # label

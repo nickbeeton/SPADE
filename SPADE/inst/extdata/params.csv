@@ -6,7 +6,8 @@ maint.cull,0.99,Culling rate after first season
 init.cull.abs,1000,Total cull in first season
 maint.cull.abs,1000,Total cull after first season
 target.density,0.5,Species density at which culling stops in a cell
-cell.size,100,Cell size (km^2)
+cell.size.x,1,Cell width (km)
+cell.size.y,1,Cell height (km)
 r.m,0.17,Growth rate of species
 theta,1.3,Shape parameter
 min.d,0.01,Minimum possible population in a cell

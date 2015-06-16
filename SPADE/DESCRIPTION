@@ -1,10 +1,10 @@
 Package: SPADE
 Type: Package
 Title: Spatial Population Abundance Dynamics Engine
-Version: 0.1.2
+Version: 0.2.0
 Date: 2014-06-14
 Author: Nick Beeton, Clive McMahon, Grant Williamson, Joanne Potts, Jonathan Bloomer, Marthan Bester, Larry Forbes and Chris Johnson
 Maintainer: Nick Beeton <nick.beeton@utas.edu.au>
 Description: Runs deterministic mathematical models predicting population abundance over time, incorporating multiple species and management strategies.
 Depends: grDevices, gWidgets, gWidgetsRGtk2, raster, rgdal, fields, RGtk2, cairoDevice, deSolve, RgoogleMaps, spam, sp, maps, png, RJSONIO
-License: GPL-2
+License: CC BY 3.0 AU

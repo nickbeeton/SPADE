@@ -91,6 +91,7 @@ sdh = function(h=NULL, ...)
     svalue(cb.a.slider) = strategy.params$cb.a[curr.strategy]
     svalue(cb.b.slider) = strategy.params$cb.b[curr.strategy]
     svalue(cb.c.slider) = strategy.params$cb.c[curr.strategy]
+    svalue(cb.method, index = TRUE) = strategy.params$cb.choice[curr.strategy]    
   }
 }
 
@@ -120,6 +121,7 @@ add.strategy.handler = function(h,...)
     strategy.params$cb.a[N.strategies] <<- 0.1464
     strategy.params$cb.b[N.strategies] <<- -1.445
     strategy.params$cb.c[N.strategies] <<- 1180
+    strategy.params$cb.choice[N.strategies] <<- 1
     # all rasters here default to 1 everywhere, using template of first carrying capacity raster
 #    strategy.params$EL.rast[[N.strategies]] <<- K.rast[[1]]*0 + 1
 #    strategy.params$EL[[N.strategies]] <<- raster::as.matrix(strategy.params$EL.rast[[N.strategies]])
@@ -187,7 +189,7 @@ rem.strategy.handler =  handler = function(h, ...){
       strategy.params = list( # re-initialise strategy.params
         cull.species = NULL, cull.seasons = NULL, area.target = NULL, culling.choice = NULL, init.cull = NULL,
         maint.cull = NULL, init.cull.abs = NULL, maint.cull.abs = NULL, target.density = NULL,
-        cb.a = NULL, cb.b = NULL, cb.c = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
+        cb.a = NULL, cb.b = NULL, cb.c = NULL, cb.choice = NULL, EL = list(NULL), PR = list(NULL), C.mask = list(NULL),
         EL.rast = list(NULL), PR.rast = list(NULL), C.rast = list(NULL), CB.A = list(NULL), TD = list(NULL), CB.B = list(NULL), CB.C = list(NULL),
         CB.A.rast = list(NULL), CB.B.rast = list(NULL), CB.C.rast = list(NULL), TD.rast = list(NULL)
       )
@@ -208,6 +210,7 @@ rem.strategy.handler =  handler = function(h, ...){
       strategy.params$cb.a <<- strategy.params$cb.a[-p]
       strategy.params$cb.b <<- strategy.params$cb.b[-p]
       strategy.params$cb.c <<- strategy.params$cb.c[-p]
+      strategy.params$cb.choice <<- strategy.params$cb.choice[-p]      
 #      strategy.params$EL.rast[[p]] <<- NULL 
 #      strategy.params$EL[[p]] <<- NULL
       strategy.params$PR.rast[[p]] <<- NULL  # note: setting an element of a list to NULL removes it entirely!
@@ -393,7 +396,31 @@ K.button.handler = function(h,...)
     svalue(K.label)=allthedata$the.file # set label
     visible(K.plot.raster)=T # select plot window
     plotdata(K[[ii]]/cell.size, main = 'Density (per km^2)') # plot data (density, not abundance)
-    if (ready) default.rasters() # create default rasters (from gui.r)
+    if (ready) 
+    {
+      default.rasters() # create default rasters (from gui.r)
+      projection = crs(K.rast[[1]], asText = TRUE)
+      if (!is.na(projection))
+      {
+        if (projection != 'NA')
+        {
+          res = res(K.rast[[1]])
+          if (grepl('longlat', projection)) # no coord system
+          {
+            mean.lat = mean(coordinates(K.rast[[1]])[,2])
+            cell.coords = c(cos(mean.lat * pi/180),1) * res * 40004/360 # estimate of cell sides in km
+            svalue(cell.size.x.slider) = cell.coords[1] # calling svalue should also auto-update values of cell.size.x and y, as well as value of cell.size
+            svalue(cell.size.y.slider) = cell.coords[2]
+          }
+          else # has coord system in some units, just dump straight in (TODO: support other units than km)
+          {
+            svalue(cell.size.x.slider) = res[1]
+            svalue(cell.size.y.slider) = res[2]
+          }
+        }
+      }
+                  
+    }
     # if there is no initial condition info for the current raster
     # (would use is.null as test but doesn't pick up empty lists)
     if (length(IC[[ii]]) == 0)
@@ -436,7 +463,7 @@ prop.abs.cull.calc = function(pop, p, abs, TD, eps, cull.mask) # capped proporti
     # plan to cull proportion p.min == p of every targeted cell
     # otherwise plan to cull enough of every targeted cell to cull the maximum number of animals (abs)
     p.min = min(p, p.abs)
-  
+                                                        
     if (all(p.min < p.lim)) # if no cell will go under the minimum density, then go ahead with plan
     {
       cull = 0*pop # initialise
@@ -504,7 +531,7 @@ abs.cull.calc = function(pop, abs, TD, eps, cull.mask) # absolute method for dis
         p.soln = a.lim[index] + prop*(a.lim[index+1] - a.lim[index]) # work out final proportion to achieve exactly abs removal
       }
       else
-        p.soln = pop.sort[index]
+        p.soln = a.lim[index]
   
       cull = 0*pop # initialise
       cull[ii] = pmin.int(p.soln * cull.mask[ii], pop[ii] - eps) # remove p.soln * cull.mask per cell while ensuring no cell goes under minimum
@@ -558,7 +585,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
             else
               CULL = pop[s,] * params$maint.cull[i] * cull.mask[[i]]
           }
-          else # continuously take out a proportion that would result in removing required percentage seasonally in an otherwise stable population
+          else # continuously take out a proportion that would result in removing required percentage annually in an otherwise stable population
           {
             if (t == 1) # if in first year, perform 'initial' management, otherwise do 'maintenance' (scaled by cull.mask)
               CULL = pop[s,] * -log(1 - params$init.cull[i]) * cull.mask[[i]]
@@ -570,7 +597,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
         {
           if (timesteps == 1) # discrete model
           {
-            if (t == 1)  # if in first timestep, perform 'initial' management, otherwise do 'maintenance'
+            if (t == 1)  # if in first year, perform 'initial' management, otherwise do 'maintenance'
             {
               CULL = abs.cull.calc(pop[s,], params$init.cull.abs[i], TD.curr, eps, cull.mask[[i]])
       #                CULL = rep(params$init.cull.abs[i]/cull.cells[i], length(pop[s,]))
@@ -587,7 +614,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
             CULL[pop[s,] > TD.curr & pop[s,] > eps] = 1 # mark removable cells
             CULL = CULL * cull.mask[[i]] # mask out unmanaged (or partly managed) areas       
                  
-            if (t == 1)  # if in first timestep, perform 'initial' management, otherwise do 'maintenance'
+            if (t == 1)  # if in first year, perform 'initial' management, otherwise do 'maintenance'
             {
               CULL = CULL * params$init.cull.abs[i] / sum(CULL) # scale so 
             }
@@ -602,7 +629,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
         {
           if (timesteps == 1) # discrete model
           {
-            if (t == 1) # if in first timestep, perform 'initial' management, otherwise do 'maintenance'
+            if (t == 1) # if in first year, perform 'initial' management, otherwise do 'maintenance'
             {
               CULL = prop.abs.cull.calc(pop[s,], params$init.cull[i], params$init.cull.abs[i], TD.curr, eps, cull.mask[[i]])
       #                CULL = rep(params$init.cull.abs[i]/cull.cells[i], length(pop[s,]))
@@ -619,7 +646,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
             CULL[pop[s,] > TD.curr & pop[s,] > eps] = 1 # mark removable cells
             CULL = CULL * cull.mask[[i]] # mask out unmanaged (or partly managed) areas
             
-            if (t == 1)  # if in first timestep, perform 'initial' management, otherwise do 'maintenance'
+            if (t == 1)  # if in first year, perform 'initial' management, otherwise do 'maintenance'
             {
               cull.abs = params$init.cull.abs[i]
               cull.prop = params$init.cull[i]
@@ -661,8 +688,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
           if (length(params$CB.A[[i]]) > 0) # additionally, if the current element has content
           {
             # work out cost of managing each cell using cost intercept, slope and hourly cost rasters
-            # TODO: allow multiple types of cost/density
-            if (svalue(cb.method, index = TRUE) == 1)
+            if (params$cb.choice == 1)
               CC = (params$CB.A[[i]][locs]*(pop[s,]/cell.size)^params$CB.B[[i]][locs])*CULL*params$CB.C[[i]][locs]
             else
               CC = CULL * (params$CB.A[[i]][locs] + params$CB.B[[i]][locs] * exp(-params$CB.C[[i]][locs] * (pop[s,] / cell.size)))
@@ -670,7 +696,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
           else
           {
             # work out cost of managing each cell using the set values
-            if (svalue(cb.method, index = TRUE) == 1)  
+            if (params$cb.choice == 1)  
               CC = (params$cb.a[i]*(pop[s,]/cell.size)^params$cb.b[i])*CULL*params$cb.c[i]
             else
               CC = CULL * (params$cb.a[i] + params$cb.b[i] * exp(-params$cb.c[i] * (pop[s,] / cell.size)))
@@ -678,7 +704,7 @@ calc.cull = function(pop, t, t2, params, cull.mask)
         }
         else # work out cost of managing each cell using the set values
         {
-          if (svalue(cb.method, index = TRUE) == 1)  
+          if (params$cb.choice == 1)  
             CC = (params$cb.a[i]*(pop[s,]/cell.size)^params$cb.b[i])*CULL*params$cb.c[i]
           else
             CC = CULL * (params$cb.a[i] + params$cb.b[i] * exp(-params$cb.c[i] * (pop[s,] / cell.size)))

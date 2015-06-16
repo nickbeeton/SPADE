@@ -204,27 +204,27 @@ create.man.window = function()
   })
   
   init.cull.group<<-ggroup(container=culling.frame) # create space for label and spinbutton
-  init.cull.label=glabel("Removal rate in first season",container=init.cull.group) # label
+  init.cull.label=glabel("Removal rate in first year",container=init.cull.group) # label
   addSpring(init.cull.group) # make sure spinbutton is aligned to the right
   # slider with handler to set value in strategy.params to spinbutton value when changed
   init.cull.slider <<- gspinbutton(from=0,to=0.99,by=.01,value=strategy.params$init.cull[curr.strategy],container=init.cull.group,
     handler=function(h,...) strategy.params$init.cull[curr.strategy] <<-svalue(init.cull.slider))
     
   maint.cull.group<<-ggroup(container=culling.frame) # create space for label and spinbutton
-  maint.cull.label=glabel("Removal rate after first season",container=maint.cull.group) # label
+  maint.cull.label=glabel("Removal rate after first year",container=maint.cull.group) # label
   addSpring(maint.cull.group) # make sure spinbutton is aligned to the right
   # slider with handler to set value in strategy.params to spinbutton value when changed
   maint.cull.slider <<- gspinbutton(from=0,to=0.99,by=.01,value=strategy.params$maint.cull[curr.strategy],container=maint.cull.group,
     handler=function(h,...) strategy.params$maint.cull[curr.strategy] <<-svalue(maint.cull.slider))
   
   init.cull.abs.group<<-ggroup(container=culling.frame) # create space for label and edit box
-  init.cull.abs.label=glabel("Total removal in first season",container=init.cull.abs.group) # label
+  init.cull.abs.label=glabel("Total removal in first year",container=init.cull.abs.group) # label
   addSpring(init.cull.abs.group) # make sure edit box is aligned to the right
   init.cull.abs.slider<<-gedit(text=strategy.params$init.cull.abs[curr.strategy],container=init.cull.abs.group) # edit box
   visible(init.cull.abs.group) = FALSE # set to originally be invisible (as Proportional mode is selected by default)
   
   maint.cull.abs.group<<-ggroup(container=culling.frame) # create space for label and edit box
-  maint.cull.abs.label=glabel("Total removal after first season",container=maint.cull.abs.group)# label
+  maint.cull.abs.label=glabel("Total removal after first year",container=maint.cull.abs.group)# label
   addSpring(maint.cull.abs.group) # make sure edit box is aligned to the right
   maint.cull.abs.slider<<-gedit(text=strategy.params$maint.cull.abs[curr.strategy],container=maint.cull.abs.group) # edit box
   visible(maint.cull.abs.group) = FALSE # set to originally be invisible
@@ -261,8 +261,8 @@ create.man.window = function()
       }
     })
    
-  # Create a radio group to select the cost-benefit method
-  cb.frame = gframe("Cost-benefit method:", container = strategy.params.group, horizontal = FALSE) # label/frame
+  # Create a radio group to select the cost per animal method
+  cb.frame = gframe("Cost per animal method:", container = strategy.params.group, horizontal = FALSE) # label/frame
   cb.method <<- gradio(c("Power", "Exponential"), container = cb.frame, 
     handler = function(h,...){ # handler for when method is changed
       a = svalue(h$obj, index = TRUE) # extract newly selected method

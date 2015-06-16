@@ -6,11 +6,12 @@ plotdata = function(DATA, ...)
     # create a raster based on the first species' carrying capacity (including projection info)
     DATA.raster = K.rast[[1]] 
     DATA.raster = setValues(DATA.raster, getValues(raster(DATA))) # set its values to the input data
-    if (is.na(projection(K.rast[[1]]))) # if there is no projection, just plot it
+    projection = crs(K.rast[[1]], asText = TRUE)
+    if (is.na(projection)) # if there is no projection, just plot it
     {
       sp::plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
     }
-    else if (projection(K.rast[[1]]) == 'NA')
+    else if (projection == 'NA')
     {
       sp::plot(DATA.raster, smallplot = c(.75,.8,0.2,0.8), ...)    
     }    
@@ -77,10 +78,10 @@ update.graphics = function()
 
 
 # Runs a basic simulation based on the current parameters and variables
-run.model = function()
+run.model = function(...)
 {
   update.strategy.sliders() # make sure the current values in the edit bars of Management are stored into memory for the simulation
-  out <<- run.sim(strategy.params, budget, fenced, strategy.params$C.mask[[1]]) # runs simulation, outputs model output to "out"
+  out <<- run.sim(strategy.params, budget, fenced, strategy.params$C.mask[[1]], ...) # runs simulation, outputs model output to "out"
   
   draw.pop.plot() # draw population-time plot
   draw.cost.plot() # draw cost-time plot
@@ -218,7 +219,7 @@ draw.pop.plot = function()
     if (i == 1)
       plot(y.v ~ x.v, pch=19,xlab="Years",ylab="Population", ylim = c(0, Rmax)) # initialise plot
     else
-      points(y.v ~ x.v, pch=19,xlab="Years",ylab="Population", col=i) # overlay plot
+      points(y.v ~ x.v, pch=19, col=i) # overlay plot
   }
   if (N.species > 1) # if we need it, generate a legend
     legend('topright', species, pch=19, col = 1:N.species)
@@ -251,9 +252,9 @@ draw.pn0.plot = function()
     {
       y.v = c(1,out$P.N0[i,]) # extract y-axis data (including 1 as initial value)
       if (i == 1)
-        plot(y.v ~ x.v, pch=19,xlab="Years",ylab="Proportion Surviving", ylim = c(0, Rmax)) # initialise plot
+        plot(y.v ~ x.v, pch=19, xlab="Years", ylab="Proportion Surviving", ylim = c(0, Rmax)) # initialise plot
       else
-        points(y.v ~ x.v, pch=19,xlab="Years",ylab="Proportion Surviving", col = i)   # overlay plot
+        points(y.v ~ x.v, pch=19, xlab="Years", ylab="Proportion Surviving", col = i)   # overlay plot
     }
     if (N.strategies > 1) # if we need it, generate a legend
       legend('topright', species[strategy.params$cull.species], pch=19, col = 1:N.strategies)

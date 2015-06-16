@@ -97,10 +97,12 @@ calc.geom = function(fenced, progress.bar = TRUE)
   n = n.x + n.y
   row.sparse = c(row.sparse.x, row.sparse.y, col.sparse.x, col.sparse.y)
   col.sparse = row.sparse[c(n + (1:n), 1:n)]
+  val.sparse = rep(rep(c(1 / cell.size.y^2, 1 / cell.size.x^2), times = c(n.x, n.y)), 2)
   # order by row
   ii = order(row.sparse)
   row.sparse = row.sparse[ii]
   col.sparse = col.sparse[ii]
+  val.sparse = val.sparse[ii]
   # vector with pointers to relationships for each element (by row)
   cell.start = 1+c(0,which(diff(row.sparse)>0),length(row.sparse))
  
@@ -133,7 +135,7 @@ calc.geom = function(fenced, progress.bar = TRUE)
   self.y = numeric(N)
  
   # initialise values for Laplacian
-  if (sparse) val.sparse = numeric(2*n)  
+#  if (sparse) val.sparse = numeric(2*n)  
   
   # calculate Laplacian values
   for (i in 1:(length(cell.start)-1)) # loop over all but the last interacting cell (last cell can't interact with itself)
@@ -163,7 +165,7 @@ calc.geom = function(fenced, progress.bar = TRUE)
       }
       else # do the above, but for a sparse matrix
       {
-        val.sparse[j] = disp.mult
+        val.sparse[j] = val.sparse[j] * disp.mult
       }
     }
   }
@@ -254,13 +256,13 @@ calc.geom = function(fenced, progress.bar = TRUE)
   #  lapmat = lapmat - diag(N)
   
   # if cannot disperse in a direction, stay put (and/or assume that just as many are migrating the other way = zero net migration)
-  lapmat <<- lapmat / 8 
+#  lapmat <<- lapmat / 8 
   if (!sparse)
-    lapmat <<- lapmat - diag(nears)/8    
+    lapmat <<- lapmat - diag(nears)
   else
   {
     diagnears = spam(list(i = 1:length(nears), j = 1:length(nears), nears))
-    lapmat <<- lapmat - diagnears/8
+    lapmat <<- lapmat - diagnears
   }
   if (progress.bar) dispose(pwindow)  
 }
@@ -292,6 +294,7 @@ run.sim.opt = function(strategy, init.cull, maint.cull, target.density, budget, 
   params$cb.a = strategy.params$cb.a[strategy]
   params$cb.b = strategy.params$cb.b[strategy]
   params$cb.c = strategy.params$cb.c[strategy]
+  params$cb.choice = strategy.params$cb.choice[strategy]
   # including only matrix version and not raster versions
   # as these are not necessary to pass
 #  params$EL = list(strategy.params$EL[[strategy]])
@@ -458,8 +461,8 @@ run.sim = function(params, budget, fenced, ctrl.mask, progress.bar = TRUE, gui =
         {
           # work out population in control region divided by initial population in control region
           # for the species defined in current strategy
-          P.N0[i, (t-1) * seasons + t2] = sum(pop[params$cull.species[i], ctrl.mask == 1], na.rm=T) / 
-            sum(IC[[params$cull.species]][locs][ctrl.mask == 1], na.rm=T)
+          P.N0[i, (t-1) * seasons + t2] = sum(pop[params$cull.species[i], ctrl.mask > 0], na.rm=T) / 
+            sum(IC[[params$cull.species[i]]][locs][ctrl.mask > 0], na.rm=T)
         }
       }
       else # if no strategies defined
@@ -521,8 +524,8 @@ calc.step = function(t, y, parms)
           }
         }
 
-        ii = KN < 0.5 * N
-        KN[ii] = 0.5 * N[ii] # to avoid instability issues
+#        ii = KN < 0.5 * N
+#        KN[ii] = 0.5 * N[ii] # to avoid instability issues
         KN = KN + 1e-6 # to avoid div by zero        
         
         # run line(s) of R code loaded from formulae.csv via demo.forms
@@ -626,13 +629,14 @@ calc.step = function(t, y, parms)
 NS.B = function(budget, C.mask, s)
 {
   # initialise results of runs (cost output)
-  top = rep(NA, 5)
-  bottom = rep(NA, 5)
+  ltd = length(td)
+  top = rep(NA, ltd)
+  bottom = rep(NA, ltd)
 
   # work out the cost if we ramp up management to 99% for each target density level
-  for (i in 1:5) {res=run.sim.opt(s, 0.99, 0.99, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); top[i] = sum(res$total.cost)}
+  for (i in 1:ltd) {res=run.sim.opt(s, 0.99, 0.99, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); top[i] = sum(res$total.cost)}
   # alternatively, work out what happens if we do the bare minimum (1%)
-  for (i in 1:5) {res=run.sim.opt(s, 0.01, 0.01, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); bottom[i] = sum(res$total.cost)}
+  for (i in 1:ltd) {res=run.sim.opt(s, 0.01, 0.01, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); bottom[i] = sum(res$total.cost)}
   
   easy = which(top < budget)   # work out which target density levels still satisfies the budget even at the highest cull rate
   hard = which(bottom < budget) # work out which target density levels are achievable within budget doing the bare minimum
@@ -646,7 +650,7 @@ NS.B = function(budget, C.mask, s)
   }
   else if (length(hard) == 0) # if we can't go under budget no matter what we do
   {
-    m = 5 # set the easiest case
+    m = ltd # set the easiest case
     cull = NA # set result to NA (will be handled by run.NSB)
   }
   else # if we can go under budget, but can't do it at the maximum 99% rate
@@ -676,13 +680,14 @@ NS.B = function(budget, C.mask, s)
 NS.D = function(pn0, C.mask, s)
 {
   # initialise results of runs (proportional pop of last season in run)
-  top = rep(NA, 5)
-  bottom = rep(NA, 5)
+  ltd = length(td)
+  top = rep(NA, ltd)
+  bottom = rep(NA, ltd)
 
   # work out the effect on population if we ramp up management to 99% for each target density level  
-  for (i in 1:5) {res=run.sim.opt(s, 0.99, 0.99, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); top[i] = res$P.N0[length(res$P.N0)]}
+  for (i in 1:ltd) {res=run.sim.opt(s, 0.99, 0.99, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); top[i] = res$P.N0[length(res$P.N0)]}
   # alternatively, work out what happens if we do the bare minimum (1%)  
-  for (i in 1:5) {res=run.sim.opt(s, 0.01, 0.01, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); bottom[i] = res$P.N0[length(res$P.N0)]}
+  for (i in 1:ltd) {res=run.sim.opt(s, 0.01, 0.01, td[i], budget, C.mask, C.mask, fenced, progress.bar = FALSE); bottom[i] = res$P.N0[length(res$P.N0)]}
   
   hard = which(top < pn0)  # work out for which target density levels the required density reduction is achieved at 99% reduction
   easy = which(bottom < pn0) # work out for which target density levels the required density reduction is achieved at 1% reduction
@@ -699,7 +704,7 @@ NS.D = function(pn0, C.mask, s)
   }
   else # look for easiest case under required density reduction (lowest target density -> lowest management rate required) where we're under target
   {
-    m = max(which(top < pn0 & bottom > pn0)) # should pretty much always be m=5 where it exists
+    m = max(which(top < pn0 & bottom > pn0)) # should pretty much always be m=ltd where it exists
     # make a function to tell us how far we are over the required prop. density for a particular rate x
     sim = function(x) sum(run.sim.opt(s, x, x, td[m], budget, C.mask, C.mask, fenced, progress.bar = FALSE)$P.N0[length(res$P.N0) - 1]) - pn0
     # find where we are pretty much exactly on target, somewhere between the min and max rates
@@ -719,6 +724,7 @@ S.B = function(budget, ctrl.mask, s)
 {
   newProgressBar('Running spatial budget simulation...') # draw progress bar
   
+  lprobs = length(probs)
   #start with 50% management rate and target density
   best = run.sim.opt(s, 0.5, 0.5, 0.5, budget, ctrl.mask, ctrl.mask, fenced, progress.bar = FALSE) 
   # work out cost-benefit percentiles across cells
@@ -740,7 +746,7 @@ S.B = function(budget, ctrl.mask, s)
     
     # run a model for each of the six given quantiles calculated above
     # so working from managing very little to all of the area
-    for (i in 1:6) 
+    for (i in 1:lprobs) 
     {
       W = (CB <= Q[i]) + 0 # set W to be where we want to manage
       test = NS.B(budget, W, s) # run non-spatial budget optimiser on the map
@@ -750,7 +756,7 @@ S.B = function(budget, ctrl.mask, s)
 #      dred = out$P.N0[duration * seasons] 
 
       # store the current priority x density measure to compare to the best
-      dred = sum(out$cost.benefit) / sum(out$total.cost)
+      dred = sum(out$cost.benefit)
 
       if (dred < best.dens) # if it's the best, store its information
       {
@@ -760,7 +766,7 @@ S.B = function(budget, ctrl.mask, s)
         best.td = test$target.density # store selected target density
       }
 
-      p = (6*(t-1) + i)/30 # calculate how far through we are
+      p = (lprobs*(t-1) + i)/(5*lprobs) # calculate how far through we are
       updateProgressBar(p, 'Running spatial budget simulation...') # draw information on progress bar
     }
     
