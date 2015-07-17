@@ -107,7 +107,7 @@ default.rasters = function(h,...)
   EL.all.rast <<- K.rast[[1]]*0 + 1 
   EL.all <<- raster::as.matrix(EL.all.rast) # set matrix version
   svalue(EL.all.label)='Default (1 for all cells)' # show default on label
-  visible(EL.all.plot.raster)=T  # select the plot device
+  visible(EL.all.plot.raster)=TRUE  # select the plot device
   svalue(raster.pad)=1                    
   plotdata(EL.all) # plot data
   
@@ -116,7 +116,7 @@ default.rasters = function(h,...)
   fenced.rast <<- K.rast[[1]]*0
   fenced <<- raster::as.matrix(fenced.rast) # set matrix version
   svalue(fenced.label)='Default (0 for all cells)' # show default on label
-  visible(fenced.plot.raster)=T # select the plot device
+  visible(fenced.plot.raster)=TRUE # select the plot device
   svalue(raster.pad)=2
   plotdata(fenced)  # plot data
 }
@@ -255,7 +255,7 @@ create.man.window = function()
         # store data in strategy.params
         strategy.params$TD.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$TD[[curr.strategy]] <<- allthedata$the.data
-        visible(TD.plot.raster)=T # select plot window
+        visible(TD.plot.raster)=TRUE # select plot window
         svalue(strats.raster.pad)=3
         plotdata(strategy.params$TD[[curr.strategy]]) # plot raster                          
       }
@@ -322,7 +322,7 @@ create.man.window = function()
         # store data in strategy.params
         strategy.params$CB.B.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$CB.B[[curr.strategy]] <<- allthedata$the.data
-        visible(CB.B.plot.raster)=T  # select plot window
+        visible(CB.B.plot.raster)=TRUE  # select plot window
         svalue(strats.raster.pad)=4
         plotdata(strategy.params$CB.B[[curr.strategy]]) # plot raster                          
       }
@@ -336,7 +336,7 @@ create.man.window = function()
         # store data in strategy.params
         strategy.params$CB.A.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$CB.A[[curr.strategy]] <<- allthedata$the.data
-        visible(CB.A.plot.raster)=T # select plot window
+        visible(CB.A.plot.raster)=TRUE # select plot window
         svalue(strats.raster.pad)=5
         plotdata(strategy.params$CB.A[[curr.strategy]]) # plot raster
       }
@@ -350,7 +350,7 @@ create.man.window = function()
         # store data in strategy.params
         strategy.params$CB.C.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$CB.C[[curr.strategy]] <<- allthedata$the.data
-        visible(CB.C.plot.raster)=T # select plot window
+        visible(CB.C.plot.raster)=TRUE # select plot window
         svalue(strats.raster.pad)=6
         plotdata(strategy.params$CB.C[[curr.strategy]]) # plot raster                          
       }
@@ -383,7 +383,7 @@ create.man.window = function()
         strategy.params$PR.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$PR[[curr.strategy]] <<- allthedata$the.data
         svalue(PR.label)=allthedata$the.file # set label to filename
-        visible(PR.plot.raster)=T # select plot window
+        visible(PR.plot.raster)=TRUE # select plot window
         svalue(strats.raster.pad)=1
         plotdata(strategy.params$PR[[curr.strategy]]) # plot raster
       }
@@ -399,27 +399,27 @@ create.man.window = function()
         strategy.params$C.rast[[curr.strategy]] <<- allthedata$the.rast 
         strategy.params$C.mask[[curr.strategy]] <<- allthedata$the.data
         svalue(C.label)=allthedata$the.file # set label to filename
-        visible(C.plot.raster)=T  # select plot window
+        visible(C.plot.raster)=TRUE  # select plot window
         svalue(strats.raster.pad)=2
         plotdata(strategy.params$C.mask[[curr.strategy]]) # plot raster
       }
     })                        
       
   # create notebook to display raster plots
-  strats.raster.pad <<- gnotebook(container=strategy.params.group,expand=T)
+  strats.raster.pad <<- gnotebook(container=strategy.params.group,expand=TRUE)
   
   # TODO: any way to limit repetition in the raster plots below? 
   # Identical process, different only in that performed on different variables
   
   # create a tab in the notebook for the Priority raster
-  PR.plot.group <- ggroup(container=strats.raster.pad,label="Priority",horizontal=F)
+  PR.plot.group <- ggroup(container=strats.raster.pad,label="Priority",horizontal=FALSE)
   PR.plot.raster <<- ggraphics(container=PR.plot.group) # create plot window for tab
   PR.plot.buttons <- ggroup(container = PR.plot.group, horizontal = TRUE) # create space for buttons
   PR.plot.edit <- gbutton("Edit",container=PR.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
       strategy.params$PR[[curr.strategy]] <<- edit(strategy.params$PR[[curr.strategy]]) 
-      visible(PR.plot.raster)=T # select plot window
+      visible(PR.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=1
       strategy.params$PR.rast[[curr.strategy]] <<- raster(strategy.params$PR[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$PR[[curr.strategy]]) # plot raster
@@ -434,14 +434,14 @@ create.man.window = function()
     })
 
   # create a tab in the notebook for the Culling Mask raster
-  C.plot.group <- ggroup(container=strats.raster.pad,label="Culling Mask",horizontal=F)
+  C.plot.group <- ggroup(container=strats.raster.pad,label="Culling Mask",horizontal=FALSE)
   C.plot.raster <<- ggraphics(container=C.plot.group) # create plot window for tab
   C.plot.buttons <- ggroup(container = C.plot.group, horizontal = TRUE) # create space for buttons            
   C.plot.edit <- gbutton("Edit",container=C.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
       strategy.params$C.mask[[curr.strategy]] <<- edit(strategy.params$C.mask[[curr.strategy]])
-      visible(C.plot.raster)=T # select plot window
+      visible(C.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=2                                     
       strategy.params$C.rast[[curr.strategy]]<<- raster(strategy.params$C.mask[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$C.mask[[curr.strategy]]) # plot raster
@@ -456,14 +456,14 @@ create.man.window = function()
     })
   
   # create a tab in the notebook for the Culling Mask raster
-  TD.plot.group <- ggroup(container=strats.raster.pad,label="Target Density",horizontal=F)
+  TD.plot.group <- ggroup(container=strats.raster.pad,label="Target Density",horizontal=FALSE)
   TD.plot.raster <<- ggraphics(container=TD.plot.group) # create plot window for tab
   TD.plot.buttons <- ggroup(container = TD.plot.group, horizontal = TRUE) # create space for buttons            
   TD.plot.edit <- gbutton("Edit",container=TD.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
       strategy.params$TD[[curr.strategy]] <<- edit(strategy.params$TD[[curr.strategy]])
-      visible(TD.plot.raster)=T # select plot window
+      visible(TD.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=3
       strategy.params$TD.rast[[curr.strategy]] <<- raster(strategy.params$TD[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$TD[[curr.strategy]]) # plot raster
@@ -478,14 +478,14 @@ create.man.window = function()
     })      
             
   # create a tab in the notebook for the Cost Intercept raster           
-  CB.B.plot.group <- ggroup(container=strats.raster.pad,label="Cost Intercept",horizontal=F)
+  CB.B.plot.group <- ggroup(container=strats.raster.pad,label="Cost Intercept",horizontal=FALSE)
   CB.B.plot.raster <<- ggraphics(container=CB.B.plot.group) # create plot window for tab
   CB.B.plot.buttons <- ggroup(container = CB.B.plot.group, horizontal = TRUE) # create space for buttons             
   CB.B.plot.edit <- gbutton("Edit",container=CB.B.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
       strategy.params$CB.B[[curr.strategy]] <<- edit(strategy.params$CB.B[[curr.strategy]])
-      visible(CB.B.plot.raster)=T # select plot window
+      visible(CB.B.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=4
       strategy.params$CB.B.rast[[curr.strategy]] <<- raster(strategy.params$CB.B[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$CB.B[[curr.strategy]]) # plot raster
@@ -500,14 +500,14 @@ create.man.window = function()
     })      
 
   # create a tab in the notebook for the Cost Slope raster     
-  CB.A.plot.group <- ggroup(container=strats.raster.pad,label="Cost Slope",horizontal=F)
+  CB.A.plot.group <- ggroup(container=strats.raster.pad,label="Cost Slope",horizontal=FALSE)
   CB.A.plot.raster <<- ggraphics(container=CB.A.plot.group) # create plot window for tab
   CB.A.plot.buttons <- ggroup(container = CB.A.plot.group, horizontal = TRUE) # create space for buttons             
   CB.A.plot.edit <- gbutton("Edit",container=CB.A.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results
       strategy.params$CB.A[[curr.strategy]] <<- edit(strategy.params$CB.A[[curr.strategy]])
-      visible(CB.A.plot.raster)=T # select plot window
+      visible(CB.A.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=5
       strategy.params$CB.A.rast[[curr.strategy]]<<-raster(strategy.params$CB.A[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$CB.A[[curr.strategy]]) # plot raster
@@ -522,14 +522,14 @@ create.man.window = function()
     })   
   
   # create a tab in the notebook for the Hourly Cost raster   
-  CB.C.plot.group <- ggroup(container=strats.raster.pad,label="Hourly Cost",horizontal=F)
+  CB.C.plot.group <- ggroup(container=strats.raster.pad,label="Hourly Cost",horizontal=FALSE)
   CB.C.plot.raster <<- ggraphics(container=CB.C.plot.group) # create plot window for tab
   CB.C.plot.buttons <- ggroup(container = CB.C.plot.group, horizontal = TRUE) # create space for buttons            
   CB.C.plot.edit <- gbutton("Edit",container=CB.C.plot.buttons, # Edit button
     handler=function(h,...){ # handler for when button pressed
       # open R's inbuilt editor, save results    
       strategy.params$CB.C[[curr.strategy]] <<- edit(strategy.params$CB.C[[curr.strategy]])
-      visible(CB.C.plot.raster)=T # select plot window
+      visible(CB.C.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad)=6
       strategy.params$CB.C.rast[[curr.strategy]]<<-raster(strategy.params$CB.C[[curr.strategy]]) # save raster version (TODO: use first species carrying capacity as template)
       plotdata(strategy.params$CB.C[[curr.strategy]]) # plot raster
@@ -551,7 +551,7 @@ create.man.window = function()
     if (length(strategy.params$PR.rast[[curr.strategy]]) > 0) # if opening window with carrying capacity already present
     {
       DATA = raster::as.matrix(strategy.params$PR.rast[[curr.strategy]]) # extract data from strategy.params
-      visible(PR.plot.raster)=T # select plot window
+      visible(PR.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad) = 1
       plotdata(DATA) # plot data
     } 
@@ -559,7 +559,7 @@ create.man.window = function()
     if (length(strategy.params$C.rast[[curr.strategy]]) > 0) # if opening window with carrying capacity already present
     {
       DATA = raster::as.matrix(strategy.params$C.rast[[curr.strategy]])  # extract data from strategy.params
-      visible(C.plot.raster)=T # select plot window
+      visible(C.plot.raster)=TRUE # select plot window
       svalue(strats.raster.pad) = 2
       plotdata(DATA) # plot data
     }         
