@@ -639,7 +639,7 @@ SPADE = function()
     handler=function(h,...){ # with handler for when button pressed
       filename=fileSaveChoose("print") # choose filename to save raster file to
       if(!is.na(filename)){ # if valid filename chosen
-        DATA = K[[1]] # create template for output raster
+        DATA = K.rast[[1]] # create template for output raster
         DATA[locs] = out$pop.ts[[curr.t]][curr.species,] # set its values to the current timestep of species data in abundance per cell
         writeRaster(DATA,filename,format="GTiff") # write raster to file in GTiff format
       }      
